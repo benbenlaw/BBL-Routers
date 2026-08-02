@@ -1,25 +1,50 @@
 package com.benbenlaw.routers.event.client;
 
 import com.benbenlaw.routers.Routers;
+import com.benbenlaw.routers.block.RoutersBlockEntities;
 import com.benbenlaw.routers.block.RoutersBlocks;
+import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
+import com.benbenlaw.routers.block.entity.ImporterBlockEntity;
 import com.benbenlaw.routers.config.StartupConfig;
 import com.benbenlaw.routers.item.*;
 import com.benbenlaw.routers.util.RoutersTags;
-import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.ShapeRenderer;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.ARGB;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
-@EventBusSubscriber(modid = Routers.MOD_ID)
-public class TooltipEvent {
+@EventBusSubscriber(modid = Routers.MOD_ID, value = Dist.CLIENT)
+public class ClientEvents {
 
     @SubscribeEvent
     public static void onTooltipEvent(ItemTooltipEvent event) {
@@ -136,5 +161,89 @@ public class TooltipEvent {
                     Component.translatable("tooltip.bblcore.shift").withStyle(ChatFormatting.YELLOW)
             );
         }
+    }
+
+    private static final RenderType LINES_NO_DEPTH_TEST = RenderType.create("routers_lines_no_depth", RenderSetup.builder(RoutersRenderPipelines.LINES_NO_DEPTH).createRenderSetup());
+    private static final int COLOR_RED   = ARGB.colorFromFloat(0.4F, 0.96F, 0.2F, 0.2F);
+    private static final int COLOR_BLUE  = ARGB.colorFromFloat(0.4F, 0.26F, 0.53F, 0.96F);
+    private static final int COLOR_GREEN = ARGB.colorFromFloat(0.4F, 0.2F, 0.96F, 0.3F);
+
+    @SubscribeEvent
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+
+        Minecraft mc = Minecraft.getInstance();
+        Player player = mc.player;
+        Level level = mc.level;
+        if (player == null || level == null) return;
+
+        ItemStack heldItem = player.getMainHandItem();
+        if (!heldItem.is(Tags.Items.TOOLS_WRENCH)) return;
+
+        PoseStack poseStack = event.getPoseStack();
+        MultiBufferSource.BufferSource buffer = mc.renderBuffers().bufferSource();
+        Vec3 cam = mc.gameRenderer.getMainCamera().position();
+        VertexConsumer lineBuilder = buffer.getBuffer(LINES_NO_DEPTH_TEST);
+
+        boolean drewAnything = false;
+        int pulseGreen = pulse(0.2F, 0.96F, 0.3F);
+
+        GlobalPos exporterGlobalPos = heldItem.get(RoutersDataComponents.EXPORTER_POSITION.value());
+        if (exporterGlobalPos != null) {
+            BlockEntity be = level.getBlockEntity(exporterGlobalPos.pos());
+
+            if (be instanceof ExporterBlockEntity exporterBlockEntity && exporterBlockEntity.importerPositions != null && !exporterBlockEntity.importerPositions.isEmpty()) {
+
+                drawBlockOutline(poseStack, lineBuilder, level, exporterGlobalPos.pos(), cam, pulseGreen);
+                drewAnything = true;
+
+                for (GlobalPos importerGlobalPos : exporterBlockEntity.importerPositions) {
+                    if (!importerGlobalPos.dimension().equals(level.dimension())) continue;
+
+                    drawBlockOutline(poseStack, lineBuilder, level, importerGlobalPos.pos(), cam, COLOR_BLUE);
+                }
+            }
+        }
+
+        GlobalPos importerGlobalPos = heldItem.get(RoutersDataComponents.IMPORTER_POSITION.value());
+        if (importerGlobalPos != null) {
+            BlockEntity be = level.getBlockEntity(importerGlobalPos.pos());
+
+            if (be instanceof ImporterBlockEntity importerBlockEntity && importerBlockEntity.exporterPositions != null && !importerBlockEntity.exporterPositions.isEmpty()) {
+
+                drawBlockOutline(poseStack, lineBuilder, level, importerGlobalPos.pos(), cam, pulseGreen);
+                drewAnything = true;
+
+                for (GlobalPos linkedExporterPos : importerBlockEntity.exporterPositions) {
+                    if (!linkedExporterPos.dimension().equals(level.dimension())) continue;
+
+                    drawBlockOutline(poseStack, lineBuilder, level, linkedExporterPos.pos(), cam, COLOR_RED);
+                }
+            }
+        }
+
+        if (drewAnything) {
+            buffer.endBatch(LINES_NO_DEPTH_TEST);
+        }
+    }
+
+    private static void drawBlockOutline(PoseStack poseStack, VertexConsumer lineBuilder, Level level, BlockPos pos, Vec3 cam, int color) {
+
+        BlockState state = level.getBlockState(pos);
+        VoxelShape shape = state.getShape(level, pos, CollisionContext.empty());
+        AABB bounds = shape.isEmpty() ? new AABB(pos) : shape.bounds().move(pos);
+
+        AABB shifted = bounds.inflate(0.002).move(-cam.x, -cam.y, -cam.z);
+        ShapeRenderer.renderShape(poseStack, lineBuilder, Shapes.create(shifted), 0, 0, 0, color, 10f);
+    }
+
+    private static int pulse(float r, float g, float b) {
+        float time = (System.currentTimeMillis() % 1000L) / 1000.0f;
+        float alpha = 0.25F + 0.35F * (float) (Math.sin(time * Math.PI * 2) * 0.5 + 0.5);
+        return ARGB.colorFromFloat(alpha, r, g, b);
+    }
+
+    @SubscribeEvent
+    public static void onRegisterRenderPipelines(RegisterRenderPipelinesEvent event) {
+        event.registerPipeline(RoutersRenderPipelines.LINES_NO_DEPTH);
     }
 }

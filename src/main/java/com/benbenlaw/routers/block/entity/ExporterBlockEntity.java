@@ -269,6 +269,8 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
             }
         }
 
+        boolean added = existing == null;
+
         if (existing != null) {
             importerPositions.remove(existing);
             setChanged();
@@ -279,9 +281,31 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
 
         if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+
+            ServerLevel importerLevel = level.getServer() != null ? level.getServer().getLevel(clickedPos.dimension()) : null;
+            if (importerLevel != null && importerLevel.getBlockEntity(clickedPos.pos()) instanceof ImporterBlockEntity importer) {
+                GlobalPos thisExporterPos = GlobalPos.of(level.dimension(), this.worldPosition);
+                if (added) {
+                    importer.addExporterPosition(thisExporterPos);
+                } else {
+                    importer.removeExporterPosition(thisExporterPos);
+                }
+            }
         }
 
-        return existing == null;
+        return added;
+    }
+
+
+    public void removeImporterPosition(GlobalPos importerGlobalPos) {
+        boolean removed = importerPositions.removeIf(pos ->
+                pos.dimension().equals(importerGlobalPos.dimension()) && pos.pos().equals(importerGlobalPos.pos()));
+        if (removed) {
+            setChanged();
+            if (level != null && !level.isClientSide()) {
+                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+            }
+        }
     }
 
     public boolean hasUpgrade(ButtonType type) {
@@ -345,10 +369,23 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
         super.loadAdditional(input);
     }
 
-    @Override public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state) {
+    @Override
+    public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state) {
         dropInventoryContents(upgradeItemHandler);
-    }
 
+        if (level == null || level.isClientSide() || importerPositions == null || importerPositions.isEmpty()) return;
+
+        GlobalPos thisExporterPos = GlobalPos.of(level.dimension(), pos);
+
+        for (GlobalPos importerGlobalPos : new ArrayList<>(importerPositions)) {
+            ServerLevel importerLevel = level.getServer() != null ? level.getServer().getLevel(importerGlobalPos.dimension()) : null;
+            if (importerLevel == null) continue;
+
+            if (importerLevel.getBlockEntity(importerGlobalPos.pos()) instanceof ImporterBlockEntity importer) {
+                importer.removeExporterPosition(thisExporterPos);
+            }
+        }
+    }
 
 
 }

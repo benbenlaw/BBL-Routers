@@ -71,11 +71,7 @@ public class ExporterBlockEntityRenderer
     }
 
     @Override
-    public void submit(
-            ExporterBlockEntityRendererState state,
-            PoseStack poseStack,
-            SubmitNodeCollector submitNodeCollector,
-            CameraRenderState cameraRenderState) {
+    public void submit(ExporterBlockEntityRendererState state,PoseStack poseStack, SubmitNodeCollector submitNodeCollector, CameraRenderState cameraRenderState) {
 
         Player player = Minecraft.getInstance().player;
         if (player == null) return;
@@ -197,12 +193,7 @@ public class ExporterBlockEntityRenderer
         }
     }
 
-    private static void addBeamVertex(VertexConsumer consumer, PoseStack.Pose pose,
-                                      float x, float y, float z,
-                                      float r, float g, float b, float a,
-                                      float u, float v,
-                                      int light, int overlay) {
-
+    private static void addBeamVertex(VertexConsumer consumer, PoseStack.Pose pose, float x, float y, float z, float r, float g, float b, float a, float u, float v, int light, int overlay) {
         consumer.addVertex(pose, x, y, z)
                 .setColor(r, g, b, a)
                 .setUv(u, v)
@@ -252,11 +243,9 @@ public class ExporterBlockEntityRenderer
         return new float[]{0f, 0f, 0f};
     }
 
-    private static final RenderType NO_CULL_BEAM = RenderType.create(
-            "no_cull_beam",
-            RenderSetup.builder(RenderPipelines.BEACON_BEAM_OPAQUE)
-                    .withTexture("Sampler0",
-                            Identifier.withDefaultNamespace("textures/entity/beacon/beacon_beam.png"))
+    private static final RenderType NO_CULL_BEAM = RenderType.create("no_cull_beam", RenderSetup.builder(
+            RenderPipelines.BEACON_BEAM_OPAQUE)
+                    .withTexture("Sampler0", Identifier.withDefaultNamespace("textures/entity/beacon/beacon_beam.png"))
                     .sortOnUpload()
                     .createRenderSetup()
     );
