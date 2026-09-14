@@ -14,7 +14,8 @@ public class RoutersNetworking {
         registrar.playToServer(OpenMenu.TYPE, OpenMenu.STREAM_CODEC, OpenMenu.HANDLER);
         registrar.playToServer(BackMenu.TYPE, BackMenu.STREAM_CODEC, BackMenu.HANDLER);
 
-        registrar.playToServer(SyncStack.TYPE, SyncStack.STREAM_CODEC, SyncStack.HANDLER);
+        registrar.playToServer(SyncFilterValue.TYPE, SyncFilterValue.STREAM_CODEC, SyncFilterValue.HANDLER);
+        registrar.playToServer(SyncStockFilter.TYPE, SyncStockFilter.STREAM_CODEC, SyncStockFilter.HANDLER);
 
     }
 }

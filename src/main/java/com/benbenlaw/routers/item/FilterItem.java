@@ -1,6 +1,7 @@
 package com.benbenlaw.routers.item;
 
-import com.benbenlaw.routers.networking.packets.SyncStack;
+import com.benbenlaw.routers.networking.packets.SyncFilterValue;
+import com.benbenlaw.routers.networking.packets.SyncStockFilter;
 import com.benbenlaw.routers.screen.ClientScreens;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
@@ -36,17 +37,17 @@ public class FilterItem extends Item {
 
     public void setTag(ItemStack stack, Identifier tag) {
         stack.set(RoutersDataComponents.TAG_FILTER.get(), tag);
-        ClientPacketDistributor.sendToServer(new SyncStack(stack));
+        ClientPacketDistributor.sendToServer(new SyncFilterValue(SyncFilterValue.FilterField.TAG, tag == null ? "" : tag.toString()));
     }
 
     public void setMod(ItemStack stack, String mod) {
         stack.set(RoutersDataComponents.MOD_FILTER.get(), mod);
-        ClientPacketDistributor.sendToServer(new SyncStack(stack));
+        ClientPacketDistributor.sendToServer(new SyncFilterValue(SyncFilterValue.FilterField.MOD, mod == null ? "" : mod));
     }
 
     public void setStock(ItemStack stack, ItemStack stockStack, int amount) {
         stack.set(RoutersDataComponents.STOCK_FILTER.get(), new StockFilter(stockStack, amount));
-        ClientPacketDistributor.sendToServer(new SyncStack(stack));
+        ClientPacketDistributor.sendToServer(new SyncStockFilter(stockStack.copyWithCount(1), amount));
     }
 
     public TagKey<Item> getTag(ItemStack stack) {
