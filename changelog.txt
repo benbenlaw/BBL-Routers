@@ -1,5 +1,8 @@
 Routers
 
+1.1.8
+- Tweaked FilterItemUpdate packet to not set ItemStack on the Player
+
 1.1.7
 - Fixed performance of exporter when using the dimensional upgrade and the other side isn't loaded
 

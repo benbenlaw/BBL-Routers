@@ -83,6 +83,32 @@ public class ExporterMenu extends AbstractContainerMenu {
         addPlayerHotbar(inventory);
     }
 
+    public void setFilterItem(int slotIndex, ItemStack stack) {
+        if (slotIndex < 0 || slotIndex >= filterInventory.getContainerSize()) return;
+
+        filterInventory.setItem(slotIndex, stack);
+        blockEntity.getFilters().set(slotIndex, stack);
+        blockEntity.getFluidFilters().set(slotIndex, FluidStack.EMPTY);
+
+        if (ModList.get().isLoaded("mekanism")) {
+            @SuppressWarnings("unchecked")
+            NonNullList<Object> chemicals = (NonNullList<Object>) blockEntity.getChemicalFilters();
+            if (slotIndex < chemicals.size()) {
+                Object emptyChemical = MekanismCompat.EMPTY_CHEMICAL != null
+                        ? MekanismCompat.EMPTY_CHEMICAL
+                        : MekanismCompat.createChemicalStack();
+                chemicals.set(slotIndex, emptyChemical);
+            }
+        }
+
+        if (slotIndex < slots.size() && slots.get(slotIndex) instanceof com.benbenlaw.routers.screen.util.GhostSlot ghostSlot) {
+            ghostSlot.set(stack);
+            ghostSlot.setFluid(FluidStack.EMPTY);
+        }
+
+        blockEntity.setChanged();
+    }
+
     private @NotNull GhostSlot getGhostSlot(int col, int row) {
         int index = col + row * 9;
         GhostSlot slot = new GhostSlot(filterInventory, index, 8 + col * 18, 18 + row * 18);

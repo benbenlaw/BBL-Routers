@@ -74,15 +74,14 @@ public class FilterItem extends Item {
         }
     }
 
-
     public void setTag(ItemStack stack, ResourceLocation tag) {
         stack.set(RoutersDataComponents.TAG_FILTER.get(), tag);
-        PacketDistributor.sendToServer(new FilterItemUpdate(stack));
+        PacketDistributor.sendToServer(new FilterItemUpdate(tag == null ? "" : tag.toString()));
     }
 
     public void setMod(ItemStack stack, String mod) {
         stack.set(RoutersDataComponents.MOD_FILTER.get(), mod);
-        PacketDistributor.sendToServer(new FilterItemUpdate(stack));
+        PacketDistributor.sendToServer(new FilterItemUpdate(mod == null ? "" : mod));
     }
 
     public TagKey<Item> getTag(ItemStack stack) {
