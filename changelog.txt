@@ -1,5 +1,8 @@
 Routers
 
+1.1.9
+Tweaked JEISyncToMenu packet to not set ItemStack on the Player
+
 1.1.8
 - Tweaked FilterItemUpdate packet to not set ItemStack on the Player
 

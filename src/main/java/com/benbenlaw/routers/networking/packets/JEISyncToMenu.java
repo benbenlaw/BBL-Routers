@@ -21,16 +21,23 @@ public record JEISyncToMenu(int slot, ItemStack stack) implements CustomPacketPa
     public static final Type<JEISyncToMenu> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Routers.MOD_ID, "jei_sync_to_menu"));
 
     public static final IPayloadHandler<JEISyncToMenu> HANDLER = (packet, context) -> {
+        context.player().level().getServer().execute(() -> {
+            ServerPlayer player = (ServerPlayer) context.player();
+            int slot = packet.slot();
 
-        ServerPlayer player = (ServerPlayer) context.player();
+            ItemStack sanitized = packet.stack().isEmpty()
+                    ? ItemStack.EMPTY
+                    : new ItemStack(packet.stack().getItem(), 1);
 
-        if (player.containerMenu instanceof ExporterMenu menu) {
-            menu.filterInventory.setItem(packet.slot, packet.stack);
-        }
-        if (player.containerMenu instanceof ImporterMenu menu) {
-            menu.filterInventory.setItem(packet.slot, packet.stack);
-        }
-
+            if (player.containerMenu instanceof ExporterMenu menu) {
+                if (slot < 0 || slot >= menu.filterInventory.getContainerSize()) return;
+                menu.filterInventory.setItem(slot, sanitized);
+            }
+            if (player.containerMenu instanceof ImporterMenu menu) {
+                if (slot < 0 || slot >= menu.filterInventory.getContainerSize()) return;
+                menu.filterInventory.setItem(slot, sanitized);
+            }
+        });
     };
 
     public static final StreamCodec<RegistryFriendlyByteBuf, JEISyncToMenu> STREAM_CODEC = StreamCodec.composite(
