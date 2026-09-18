@@ -5,7 +5,7 @@ import com.benbenlaw.core.block.entity.WhitelistBlockEntity;
 import com.benbenlaw.core.network.packets.SyncWhitelistMode;
 import com.benbenlaw.core.screen.util.button.WhitelistButton;
 import com.benbenlaw.routers.Routers;
-import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
+import com.benbenlaw.routers.api.ConfigurableRouterBlockEntity;
 import com.benbenlaw.routers.networking.packets.OpenMenu;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.Minecraft;
@@ -46,12 +46,12 @@ public class FilterButton extends Button {
     }
 
     public static FilterButton create(int x, int y, int width, int height, BlockEntity blockEntity, ButtonType type) {
-         if (blockEntity instanceof ExporterBlockEntity exporterBlock) {
+         if (blockEntity instanceof ConfigurableRouterBlockEntity configurable) {
 
-             if (!exporterBlock.hasUpgrade(type)) return null;
+             if (!configurable.hasUpgrade(type)) return null;
 
              return new FilterButton(x, y, width, height, button ->
-                     ClientPacketDistributor.sendToServer(new OpenMenu(exporterBlock.getBlockPos(), type)), type);
+                     ClientPacketDistributor.sendToServer(new OpenMenu(blockEntity.getBlockPos(), type)), type);
 
          }
 

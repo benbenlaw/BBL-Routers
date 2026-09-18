@@ -10,7 +10,9 @@ public class RoutersTags {
 
     public static class Items {
 
-        public static final TagKey<Item> UPGRADES = commonTags("upgrades");
+        public static final TagKey<Item> UPGRADES = tag("upgrades");
+        public static final TagKey<Item> EXPORTER_UPGRADES = tag("upgrades/exporter");
+        public static final TagKey<Item> IMPORTER_UPGRADES = tag("upgrades/importer");
 
         public static final TagKey<Item> RF_UPGRADES = tag("rf_upgrades");
         public static final TagKey<Item> ITEM_UPGRADES = tag("item_upgrades");
@@ -24,8 +26,6 @@ public class RoutersTags {
         public static final TagKey<Item> HEAT_UPGRADES_PC = tag("heat_upgrades_pc");
         public static final TagKey<Item> FILTERS = tag("filters");
         public static final TagKey<Item> DIMENSIONAL_UPGRADES = tag("dimensional_upgrades");
-
-
 
         private static TagKey<Item> tag(String name) {
             return ItemTags.create(Identifier.fromNamespaceAndPath(Routers.MOD_ID, name));

@@ -1,30 +1,17 @@
 package com.benbenlaw.routers.screen;
 
 import com.benbenlaw.core.screen.SimpleAbstractContainerMenu;
-import com.benbenlaw.core.screen.util.slot.FilterFluidSlot;
-import com.benbenlaw.core.screen.util.slot.FilterSlot;
 import com.benbenlaw.core.screen.util.slot.InputSlot;
-import com.benbenlaw.routers.block.RoutersBlocks;
-import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.block.entity.ImporterBlockEntity;
-import com.benbenlaw.routers.screen.util.button.ButtonType;
+import com.benbenlaw.routers.util.RoutersTags;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.transfer.fluid.FluidUtil;
-import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
-import java.util.Objects;
 
 public class ImporterMenu extends SimpleAbstractContainerMenu {
 
@@ -45,55 +32,57 @@ public class ImporterMenu extends SimpleAbstractContainerMenu {
         this.level = inventory.player.level();
         this.blockEntity = (ImporterBlockEntity) this.level.getBlockEntity(blockPos);
 
-
         for (int i = 0; i < 9; i++) {
-            this.addSlot(new FilterSlot(blockEntity.getFilterItemHandler(), blockEntity.getFilterItemHandler()::set,
-                    i, 8 + i * 18, 18));
+            assert blockEntity != null;
+            this.addSlot(new InputSlot(blockEntity.getUpgradeItemHandler(), blockEntity.getUpgradeItemHandler()::set,
+                    i, 8 + i * 18, 54));
         }
-
-        SimpleContainer fluidFilterContainer = new SimpleContainer(9);
-        for (int i = 0; i < 9; i++) {
-            this.addSlot(new FilterFluidSlot(fluidFilterContainer, blockEntity.getFilterFluidHandler(), i, 8 + i * 18, 54));
-        }
-
 
         this.addDataSlots(data);
     }
 
     @Override
-    public ItemStack quickMoveStack(Player player, int index) {
-        return ItemStack.EMPTY;
-    }
+    public @NotNull ItemStack quickMoveStack(Player playerIn, int pIndex) {
+        Slot sourceSlot = this.slots.get(pIndex);
+        if (sourceSlot == null || !sourceSlot.hasItem()) {
+            return ItemStack.EMPTY;
+        }
 
+        ItemStack sourceStack = sourceSlot.getItem();
 
+        if (pIndex >= 36) {
+            return super.quickMoveStack(playerIn, pIndex);
+        }
 
-    @Override
-    public void clicked(int slotId, int button, ContainerInput containerInput, Player player) {
-        if (slotId >= 0 && slotId < slots.size()) {
-            if (this.slots.get(slotId) instanceof FilterSlot filterSlot) {
-                ItemStack carried = this.getCarried();
-                if (!carried.isEmpty()) {
-                    filterSlot.set(carried.copyWithCount(1));
-                } else {
-                    filterSlot.set(ItemStack.EMPTY);
-                }
-                return;
-            }
+        if (!sourceStack.is(RoutersTags.Items.IMPORTER_UPGRADES)) {
+            return ItemStack.EMPTY;
+        }
 
-            if (this.slots.get(slotId) instanceof FilterFluidSlot filterSlot) {
+        ItemStack single = sourceStack.copyWithCount(1);
 
-                if (this.getCarried().isEmpty()) {
-                    filterSlot.setEmpty();
-                } else {
-                    ItemStack carried = this.getCarried();
-                    FluidStack fluidInStack = FluidUtil.getFirstStackContained(carried);
-                    if (!fluidInStack.isEmpty()) {
-                        filterSlot.set(fluidInStack);
-                    }
-                }
-                return;
+        if (blockEntity.hasUpgradeTypeAlready(single)) {
+            return ItemStack.EMPTY;
+        }
+
+        Slot targetSlot = null;
+        for (int i = 36; i < 45; i++) {
+            Slot slot = this.slots.get(i);
+            if (!slot.hasItem()) {
+                targetSlot = slot;
+                break;
             }
         }
-        super.clicked(slotId, button, containerInput, player);
+
+        if (targetSlot == null) {
+            return ItemStack.EMPTY;
+        }
+
+        targetSlot.set(single);
+        targetSlot.setChanged();
+
+        sourceStack.shrink(1);
+        sourceSlot.setChanged();
+
+        return ItemStack.EMPTY;
     }
 }

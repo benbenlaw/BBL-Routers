@@ -56,7 +56,7 @@ public class ExporterMenu extends SimpleAbstractContainerMenu {
             return super.quickMoveStack(playerIn, pIndex);
         }
 
-        if (!sourceStack.is(RoutersTags.Items.UPGRADES)) {
+        if (!sourceStack.is(RoutersTags.Items.EXPORTER_UPGRADES)) {
             return ItemStack.EMPTY;
         }
 

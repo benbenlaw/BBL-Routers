@@ -1,7 +1,7 @@
 package com.benbenlaw.routers.screen.util.button;
 
 import com.benbenlaw.routers.Routers;
-import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
+import com.benbenlaw.routers.api.ConfigurableRouterBlockEntity;
 import com.benbenlaw.routers.networking.packets.BackMenu;
 import com.benbenlaw.routers.networking.packets.OpenMenu;
 import net.minecraft.client.Minecraft;
@@ -51,9 +51,9 @@ public class BackButton extends Button {
     }
 
     public static BackButton create(int x, int y, int width, int height, BlockEntity blockEntity) {
-        if (blockEntity instanceof ExporterBlockEntity exporterBlock) {
+        if (blockEntity instanceof ConfigurableRouterBlockEntity) {
             return new BackButton(x, y, width, height, button ->
-                    ClientPacketDistributor.sendToServer(new BackMenu(exporterBlock.getBlockPos())));
+                    ClientPacketDistributor.sendToServer(new BackMenu(blockEntity.getBlockPos())));
 
         }
 

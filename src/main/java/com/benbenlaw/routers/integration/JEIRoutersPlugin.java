@@ -4,7 +4,6 @@ import com.benbenlaw.core.integration.jei.GhostFilter;
 import com.benbenlaw.routers.Routers;
 import com.benbenlaw.routers.block.RoutersBlocks;
 import com.benbenlaw.routers.item.RoutersItems;
-import com.benbenlaw.routers.screen.ImporterScreen;
 import com.benbenlaw.routers.screen.upgrade.FilterScreen;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
@@ -29,7 +28,6 @@ public class JEIRoutersPlugin implements IModPlugin {
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
         registration.addGhostIngredientHandler(FilterScreen.class, new GhostFilter());
-        registration.addGhostIngredientHandler(ImporterScreen.class, new GhostFilter());
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.benbenlaw.routers.api;
 
 import com.benbenlaw.routers.block.custom.RouterBlock;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
+import com.benbenlaw.routers.block.entity.ImporterBlockEntity;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 
@@ -18,7 +19,7 @@ public class TransferEngine {
                 if (level.getBlockState(importers.get(lastIndex).pos()).getBlock() instanceof RouterBlock) {
                     int currentIndex = (lastIndex + i) % size;
                     boolean isWorking = level.getBlockState(importers.get(currentIndex).pos()).getValue(RouterBlock.WORKING);
-                    if (isWorking) {
+                    if (isWorking && !pullsOwnResources(level, importers.get(currentIndex))) {
                         if (transferLogic.tryTransfer(level, exporter, importers.get(currentIndex))) {
                             return (currentIndex + 1) % size;
                         }
@@ -29,7 +30,7 @@ public class TransferEngine {
             for (int i = 0; i < size; i++) {
                 if (level.getBlockState(importers.get(i).pos()).getBlock() instanceof RouterBlock) {
                     boolean isWorking = level.getBlockState(importers.get(i).pos()).getValue(RouterBlock.WORKING);
-                    if (isWorking) {
+                    if (isWorking && !pullsOwnResources(level, importers.get(i))) {
                         if (transferLogic.tryTransfer(level, exporter, importers.get(i))) {
                             return lastIndex;
                         }
@@ -38,5 +39,11 @@ public class TransferEngine {
             }
         }
         return lastIndex;
+    }
+
+    // An importer with its own Round Robin upgrade actively pulls from its linked exporters itself,
+    // so the exporter must not also push to it (that would double up the transfer).
+    private static boolean pullsOwnResources(ServerLevel level, GlobalPos importerPos) {
+        return level.getBlockEntity(importerPos.pos()) instanceof ImporterBlockEntity importer && importer.isRoundRobin;
     }
 }

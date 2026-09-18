@@ -4,6 +4,7 @@ import com.benbenlaw.core.block.entity.SyncableBlockEntity;
 import com.benbenlaw.core.block.entity.handler.fluid.FilterFluidHandler;
 import com.benbenlaw.core.block.entity.handler.item.FilterItemHandler;
 import com.benbenlaw.core.block.entity.handler.item.InputItemHandler;
+import com.benbenlaw.routers.api.ConfigurableRouterBlockEntity;
 import com.benbenlaw.routers.api.TransferModule;
 import com.benbenlaw.routers.block.RoutersBlockEntities;
 import com.benbenlaw.routers.block.custom.RouterBlock;
@@ -40,7 +41,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProvider {
+public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProvider, ConfigurableRouterBlockEntity {
 
     public List<GlobalPos> importerPositions;
     public final ContainerData data;
@@ -52,7 +53,7 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
     private boolean isBlacklist;
 
     private final InputItemHandler upgradeItemHandler = new InputItemHandler(this, 9, (i, stack) ->
-            stack.is(RoutersTags.Items.UPGRADES) && !hasUpgradeTypeAlready(stack)) {
+            stack.is(RoutersTags.Items.EXPORTER_UPGRADES) && !hasUpgradeTypeAlready(stack)) {
         @Override
         protected int getCapacity(int index, ItemResource resource) {
             return 1;
@@ -85,6 +86,7 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
             }
 
             super.onContentsChanged(index, previousContents);
+            notifyLinkedImportersOfUpgradeChange();
         }
 
     };
@@ -315,6 +317,19 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
             }
         }
         return false;
+    }
+
+    private void notifyLinkedImportersOfUpgradeChange() {
+        if (level == null || level.isClientSide() || level.getServer() == null) return;
+
+        for (GlobalPos pos : importerPositions) {
+            ServerLevel importerLevel = level.getServer().getLevel(pos.dimension());
+            if (importerLevel == null || !importerLevel.isLoaded(pos.pos())) continue;
+
+            if (importerLevel.getBlockEntity(pos.pos()) instanceof ImporterBlockEntity importer) {
+                importer.recomputeLinkedUpgrades();
+            }
+        }
     }
 
     @Override

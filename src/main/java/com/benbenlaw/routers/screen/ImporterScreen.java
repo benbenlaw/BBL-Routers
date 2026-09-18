@@ -1,37 +1,116 @@
 package com.benbenlaw.routers.screen;
 
-import com.benbenlaw.core.screen.util.FluidRenderingUtils;
 import com.benbenlaw.routers.Routers;
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.ChatFormatting;
+import com.benbenlaw.routers.api.RouterButtonTypes;
+import com.benbenlaw.routers.screen.util.MousePositionManagerUtil;
+import com.benbenlaw.routers.screen.util.button.ButtonType;
+import com.benbenlaw.routers.screen.util.button.FilterButton;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
-import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ImporterScreen extends AbstractContainerScreen<ImporterMenu> {
 
     private static final Identifier TEXTURE = Routers.identifier("textures/gui/importer_gui.png");
 
+    private final Map<ButtonType, FilterButton> filterButtons = new HashMap<>();
+
     public ImporterScreen(ImporterMenu menu, Inventory inventory, Component component) {
         super(menu, inventory, component);
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+
+        filterButtons.clear();
+
+        if (MousePositionManagerUtil.lastMouseX != -1) {
+            MousePositionManagerUtil.setLastKnownPosition();
+        }
+
+        updateButtons();
+    }
+
+    private void updateButtons() {
+        int baseX = (width - imageWidth) / 2;
+        int baseY = (height - imageHeight) / 2;
+
+        int BUTTON_SIZE = 20;
+        int BUTTON_SPACING = 19;
+        int BUTTON_Y = 30;
+
+        long upgradeCount = RouterButtonTypes.BUTTONS.values().stream()
+                .filter(type -> menu.blockEntity.hasUpgrade(type))
+                .count();
+
+        int totalWidth = (int) (upgradeCount * BUTTON_SPACING - (upgradeCount > 0 ? (BUTTON_SPACING - BUTTON_SIZE) : 0));
+        int startX = baseX + (imageWidth - totalWidth) / 2 + 1;
+
+        int index = 0;
+
+        for (ButtonType type : RouterButtonTypes.BUTTONS.values()) {
+            boolean hasUpgrade = menu.blockEntity.hasUpgrade(type);
+
+            if (hasUpgrade) {
+                int x = startX + index * BUTTON_SPACING;
+                int y = baseY + BUTTON_Y;
+
+                if (!filterButtons.containsKey(type)) {
+                    FilterButton button = FilterButton.create(
+                            x, y,
+                            BUTTON_SIZE,
+                            BUTTON_SIZE,
+                            menu.blockEntity,
+                            type
+                    );
+
+                    if (button != null) {
+                        addRenderableWidget(button);
+                        filterButtons.put(type, button);
+                    }
+                } else {
+                    filterButtons.get(type).setPosition(x, y);
+                }
+                index++;
+            } else if (filterButtons.containsKey(type)) {
+                removeWidget(filterButtons.get(type));
+                filterButtons.remove(type);
+            }
+        }
+    }
+
+    @Override
+    protected void extractTooltip(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY) {
+        super.extractTooltip(guiGraphics, mouseX, mouseY);
+
+        for (FilterButton button : filterButtons.values()) {
+            if (button.isHovered()) {
+                Component buttonText = Component.translatable(button.getType().getButtonTooltip());
+
+                List<ClientTooltipComponent> tooltipComponents = List.of(ClientTooltipComponent.create(buttonText.getVisualOrderText()));
+                guiGraphics.tooltip(
+                        Minecraft.getInstance().font,
+                        tooltipComponents,
+                        mouseX,
+                        mouseY,
+                        DefaultTooltipPositioner.INSTANCE,
+                        null
+                );
+                break;
+            }
+        }
     }
 
     @Override
@@ -44,55 +123,22 @@ public class ImporterScreen extends AbstractContainerScreen<ImporterMenu> {
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, x, y, 0, 0, imageWidth, imageHeight, 256, 256);
     }
 
-
     @Override
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
 
-        int x = (width - imageWidth) / 2;
-        int y = (height - imageHeight) / 2;
-
-        for (int i = 0; i < 9; i++) {
-            FluidRenderingUtils.renderFluidStack(guiGraphics, menu.blockEntity.getFilterFluidHandler().getFilter(i), x + 8 + (i * 18), y + 54, 16, 16, mouseX, mouseY);
-        }
-
-        for (int i = 0; i < menu.blockEntity.getFilterFluidHandler().size(); i++) {
-            FluidRenderingUtils.renderFluidStackTooltip(guiGraphics, menu.blockEntity.getFilterFluidHandler().getFilter(i), menu.blockEntity.getFilterFluidHandler(), i, x + 8 + (i * 18), y + 54, 16, 16, mouseX, mouseY);
-        }
+        updateButtons();
     }
 
     @Override
-    protected void extractSlot(GuiGraphicsExtractor guiGraphics, Slot slot, int mouseX, int mouseY) {
-        super.extractSlot(guiGraphics, slot, mouseX, mouseY);
-
-        if (slot.index > 35 && slot.index < 45) {
-            if (isHovering(slot, mouseX, mouseY)) {
-                ItemStack stack = slot.getItem();
-                if (stack.isEmpty()) {
-                    List<Component> lines = new ArrayList();
-                    lines.add(Component.translatable("tooltip.routers.empty_item_filter_slot").withStyle(ChatFormatting.GRAY));
-                    List<ClientTooltipComponent> tooltipComponents = lines.stream().map(Component::getVisualOrderText).map(ClientTooltipComponent::create).toList();
-                    guiGraphics.tooltip(Minecraft.getInstance().font, tooltipComponents, mouseX - leftPos, mouseY - topPos, DefaultTooltipPositioner.INSTANCE, null);
-                }
-            }
-        }
-        if (slot.index > 44 && slot.index < 55) {
-            if (isHovering(slot, mouseX, mouseY)) {
-                ItemStack stack = slot.getItem();
-                if (stack.isEmpty()) {
-                    List<Component> lines = new ArrayList();
-                    lines.add(Component.translatable("tooltip.routers.empty_fluid_filter_slot").withStyle(ChatFormatting.GRAY));
-                    List<ClientTooltipComponent> tooltipComponents = lines.stream().map(Component::getVisualOrderText).map(ClientTooltipComponent::create).toList();
-                    guiGraphics.tooltip(Minecraft.getInstance().font, tooltipComponents, mouseX - leftPos, mouseY - topPos, DefaultTooltipPositioner.INSTANCE, null);
-
-                }
-            }
-        }
+    public boolean mouseClicked(MouseButtonEvent event, boolean isDoubleClick) {
+        MousePositionManagerUtil.getLastKnownPosition();
+        return super.mouseClicked(event, isDoubleClick);
     }
 
-    private boolean isHovering(Slot slot, double mouseX, double mouseY) {
-        return mouseX >= leftPos + slot.x && mouseX < leftPos + slot.x + 16
-                && mouseY >= topPos + slot.y && mouseY < topPos + slot.y + 16;
+    @Override
+    public void onClose() {
+        MousePositionManagerUtil.clear();
+        super.onClose();
     }
-
 }

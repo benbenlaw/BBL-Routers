@@ -3,8 +3,8 @@ package com.benbenlaw.routers.screen.upgrade;
 import com.benbenlaw.core.screen.SimpleAbstractContainerMenu;
 import com.benbenlaw.core.screen.util.slot.FilterFluidSlot;
 import com.benbenlaw.core.screen.util.slot.FilterSlot;
+import com.benbenlaw.routers.api.ConfigurableRouterBlockEntity;
 import com.benbenlaw.routers.api.RouterButtonTypes;
-import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.screen.RoutersMenuTypes;
 import com.benbenlaw.routers.api.screen.ScreenModule;
 import com.benbenlaw.routers.api.screen.RouterUIRegistries;
@@ -25,13 +25,12 @@ import net.neoforged.neoforge.transfer.fluid.FluidUtil;
 
 public class FilterMenu extends SimpleAbstractContainerMenu {
 
-    public final ExporterBlockEntity blockEntity;
+    public final ConfigurableRouterBlockEntity blockEntity;
     protected final Level level;
     protected final Player player;
     public final BlockPos blockPos;
     public final ButtonType buttonType;
 
-    // Buffer Constructor - Now reading ResourceLocation instead of Enum
     public FilterMenu(int containerID, Inventory inventory, FriendlyByteBuf extraData) {
         this(containerID, inventory,
                 extraData.readBlockPos(),
@@ -45,9 +44,9 @@ public class FilterMenu extends SimpleAbstractContainerMenu {
         this.blockPos = blockPos;
         this.buttonType = buttonType;
         this.level = inventory.player.level();
-        this.blockEntity = (ExporterBlockEntity) this.level.getBlockEntity(blockPos);
+        this.blockEntity = this.level.getBlockEntity(blockPos) instanceof ConfigurableRouterBlockEntity configurable
+                ? configurable : null;
 
-        // Safety check: if buttonType is null (mod removed?), don't add slots
         if (blockEntity != null && buttonType != null) {
             Registry<ScreenModule> registry = level.registryAccess().lookupOrThrow(RouterUIRegistries.SCREEN_MODULE_KEY);
 
@@ -62,8 +61,8 @@ public class FilterMenu extends SimpleAbstractContainerMenu {
         this.addDataSlots(data);
     }
 
-    public Slot addSlotPublic(Slot slot) {
-        return this.addSlot(slot);
+    public void addSlotPublic(Slot slot) {
+        this.addSlot(slot);
     }
 
     @Override

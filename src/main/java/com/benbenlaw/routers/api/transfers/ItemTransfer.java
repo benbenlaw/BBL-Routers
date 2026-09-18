@@ -1,6 +1,7 @@
 package com.benbenlaw.routers.api.transfers;
 
 import com.benbenlaw.core.block.entity.handler.item.FilterItemHandler;
+import com.benbenlaw.routers.api.ImporterPullEngine;
 import com.benbenlaw.routers.api.TransferEngine;
 import com.benbenlaw.routers.block.custom.RouterBlock;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
@@ -54,7 +55,8 @@ public class ItemTransfer {
                         }
 
                         if (importer != null && !ResourceHandlerUtil.isEmpty(importer.getFilterItemHandler())) {
-                            if (!checkImporterFilter(importer.getFilterItemHandler(), resource, isWhitelist, importerAdjacentHandler)) {
+                            boolean importerIsWhitelist = !importer.isBlacklist();
+                            if (!checkImporterFilter(importer.getFilterItemHandler(), resource, importerIsWhitelist, importer.isIgnoreNbt(), importerAdjacentHandler)) {
                                 return false;
                             }
                         }
@@ -64,6 +66,69 @@ public class ItemTransfer {
 
                     return moved != null && moved.amount() > 0;
                 });
+    }
+
+    // Driven by the importer's own tick when it has a Round Robin upgrade - it actively pulls
+    // from its linked exporters instead of waiting for them to push (see TransferEngine.pullsOwnResources).
+    public static int pullItems(ServerLevel level, ImporterBlockEntity importer) {
+
+        var state = level.getBlockState(importer.getBlockPos());
+        Direction facing = state.getValue(RouterBlock.FACING);
+
+        ResourceHandler<ItemResource> target = level.getCapability(Capabilities.Item.BLOCK,
+                importer.getBlockPos().relative(facing), facing.getOpposite());
+
+        if (target == null || target.size() == 0) return importer.lastExporterIndex;
+
+        return ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
+                (srvLevel, imp, exporterPos) -> {
+
+                    ExporterBlockEntity exporter = getExporterAt(srvLevel, exporterPos);
+                    if (exporter == null || !exporter.hasCorrectUpgrade(RoutersTags.Items.ITEM_UPGRADES)) return false;
+
+                    ResourceHandler<ItemResource> source = getSourceHandler(srvLevel, exporter, exporterPos);
+                    if (source == null) return false;
+
+                    var moved = ResourceHandlerUtil.moveFirst(source, target, resource -> {
+                        boolean isWhitelist = !exporter.isBlacklist();
+
+                        if (!ResourceHandlerUtil.isEmpty(exporter.getFilterItemHandler())) {
+                            if (!checkFilter(exporter.getFilterItemHandler(), resource, isWhitelist, exporter.isIgnoreNbt())) {
+                                return false;
+                            }
+                        }
+
+                        boolean importerIsWhitelist = !imp.isBlacklist();
+                        if (!ResourceHandlerUtil.isEmpty(imp.getFilterItemHandler())) {
+                            if (!checkImporterFilter(imp.getFilterItemHandler(), resource, importerIsWhitelist, imp.isIgnoreNbt(), target)) {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    }, exporter.getUpgradeValue(RoutersTags.Items.ITEM_UPGRADES), null);
+
+                    return moved != null && moved.amount() > 0;
+                });
+    }
+
+    @Nullable
+    private static ExporterBlockEntity getExporterAt(ServerLevel importerLevel, GlobalPos exporterPos) {
+        ServerLevel exporterLevel = importerLevel.getServer().getLevel(exporterPos.dimension());
+        if (exporterLevel == null || !exporterLevel.isLoaded(exporterPos.pos())) return null;
+        return exporterLevel.getBlockEntity(exporterPos.pos()) instanceof ExporterBlockEntity exporter ? exporter : null;
+    }
+
+    @Nullable
+    private static ResourceHandler<ItemResource> getSourceHandler(ServerLevel importerLevel, ExporterBlockEntity exporter, GlobalPos exporterPos) {
+        if (!exporterPos.dimension().equals(importerLevel.dimension()) && !exporter.canDoDimensionalTravel()) return null;
+
+        ServerLevel exporterLevel = importerLevel.getServer().getLevel(exporterPos.dimension());
+        if (exporterLevel == null) return null;
+
+        var state = exporterLevel.getBlockState(exporterPos.pos());
+        Direction facing = state.getValue(RouterBlock.FACING);
+        return exporterLevel.getCapability(Capabilities.Item.BLOCK, exporterPos.pos().relative(facing), facing.getOpposite());
     }
 
     private static boolean checkFilter(FilterItemHandler filterHandler, ItemResource resource, boolean isWhitelist, boolean ignoreNbt) {
@@ -97,7 +162,7 @@ public class ItemTransfer {
         return isWhitelist == foundMatch;
     }
 
-    private static boolean checkImporterFilter(FilterItemHandler filterHandler, ItemResource resource, boolean isWhitelist, @Nullable ResourceHandler<ItemResource> adjacentHandler) {
+    private static boolean checkImporterFilter(FilterItemHandler filterHandler, ItemResource resource, boolean isWhitelist, boolean ignoreNbt, @Nullable ResourceHandler<ItemResource> adjacentHandler) {
         ItemStack incoming = resource.toStack();
         boolean hasAnyFilter = false;
         boolean foundMatch = false;
@@ -125,7 +190,10 @@ public class ItemTransfer {
                     break;
                 }
             } else {
-                if (ItemStack.isSameItemSameComponents(incoming, filterStack)) {
+                boolean matches = ignoreNbt
+                        ? resource.getItem() == filterStack.getItem()
+                        : ItemStack.isSameItemSameComponents(incoming, filterStack);
+                if (matches) {
                     foundMatch = true;
                     break;
                 }

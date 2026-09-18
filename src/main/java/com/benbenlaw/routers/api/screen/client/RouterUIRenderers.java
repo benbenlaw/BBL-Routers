@@ -2,6 +2,7 @@ package com.benbenlaw.routers.api.screen.client;
 
 import com.benbenlaw.core.screen.util.FluidRenderingUtils;
 import com.benbenlaw.routers.Routers;
+import com.benbenlaw.routers.api.ConfigurableRouterBlockEntity;
 import com.benbenlaw.routers.api.RouterButtonTypes;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.config.StartupConfig;
@@ -25,7 +26,7 @@ public class RouterUIRenderers {
 
     public interface Renderer {
         void renderBackground(GuiGraphicsExtractor gui, FilterScreen screen);
-        void renderExtra(GuiGraphicsExtractor gui, FilterScreen screen, ExporterBlockEntity entity, int mouseX, int mouseY);
+        void renderExtra(GuiGraphicsExtractor gui, FilterScreen screen, ConfigurableRouterBlockEntity entity, int mouseX, int mouseY);
     }
 
     public static void register(ButtonType type, Renderer renderer) {
@@ -40,7 +41,7 @@ public class RouterUIRenderers {
                 gui.blitSprite(RenderPipelines.GUI_TEXTURED, SLOTS_9, screen.getGuiLeft() + 7, screen.getGuiTop() + 35, 162, 18);
                 gui.blitSprite(RenderPipelines.GUI_TEXTURED, SLOTS_9, screen.getGuiLeft() + 7, screen.getGuiTop() + 53, 162, 18);
             }
-            @Override public void renderExtra(GuiGraphicsExtractor g, FilterScreen s, ExporterBlockEntity e, int mx, int my) {}
+            @Override public void renderExtra(GuiGraphicsExtractor g, FilterScreen s, ConfigurableRouterBlockEntity e, int mx, int my) {}
         });
 
         // Fluid Screen
@@ -52,7 +53,7 @@ public class RouterUIRenderers {
             }
 
             @Override
-            public void renderExtra(GuiGraphicsExtractor gui, FilterScreen screen, ExporterBlockEntity entity, int mouseX, int mouseY) {
+            public void renderExtra(GuiGraphicsExtractor gui, FilterScreen screen, ConfigurableRouterBlockEntity entity, int mouseX, int mouseY) {
                 for (int i = 0; i < 18; i++) {
                     int slotX = screen.getGuiLeft() + 8 + ((i % 9) * 18);
                     int slotY = screen.getGuiTop() + 36 + ((i / 9) * 18);
@@ -69,9 +70,11 @@ public class RouterUIRenderers {
             @Override public void renderBackground(GuiGraphicsExtractor gui, FilterScreen screen) {}
 
             @Override
-            public void renderExtra(GuiGraphicsExtractor gui, FilterScreen screen, ExporterBlockEntity entity, int mouseX, int mouseY) {
-                int rate = entity.getUpgradeValue(RoutersTags.Items.RF_UPGRADES);
-                int speed = entity.getUpgradeValue(RoutersTags.Items.SPEED_UPGRADES);
+            public void renderExtra(GuiGraphicsExtractor gui, FilterScreen screen, ConfigurableRouterBlockEntity entity, int mouseX, int mouseY) {
+                if (!(entity instanceof ExporterBlockEntity exporter)) return;
+
+                int rate = exporter.getUpgradeValue(RoutersTags.Items.RF_UPGRADES);
+                int speed = exporter.getUpgradeValue(RoutersTags.Items.SPEED_UPGRADES);
                 if (speed == 0) speed = StartupConfig.defaultSpeedPerOperation.get();
 
                 Component text = Component.literal(rate + " FE / " + speed + " ticks").withStyle(ChatFormatting.DARK_GREEN);

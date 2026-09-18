@@ -1,0 +1,7 @@
+{
+  "values": [
+    "#routers:round_robin_upgrades",
+    "routers:blacklist_upgrade",
+    "routers:ignore_nbt_upgrade"
+  ]
+}

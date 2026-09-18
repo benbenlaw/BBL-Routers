@@ -7,6 +7,7 @@ import com.benbenlaw.routers.block.RoutersBlocks;
 import com.benbenlaw.routers.block.RoutersCapabilities;
 import com.benbenlaw.routers.block.entity.renderer.ExporterBlockEntityRenderer;
 import com.benbenlaw.routers.config.StartupConfig;
+import com.benbenlaw.routers.gametest.RoutersGameTests;
 import com.benbenlaw.routers.item.RoutersCreativeTab;
 import com.benbenlaw.routers.item.RoutersDataComponents;
 import com.benbenlaw.routers.item.RoutersItems;
@@ -28,6 +29,7 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
+import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,9 +49,11 @@ public class Routers {
         RoutersMenuTypes.MENUS.register(eventBus);
         RoutersTransfers.TRANSFER_MODULES.register(eventBus);
         RouterUIRegistries.SCREEN_MODULES.register(eventBus);
+        RoutersGameTests.TEST_FUNCTIONS.register(eventBus);
 
         eventBus.addListener(this::commonSetup);
         eventBus.addListener(this::registerCapabilities);
+        eventBus.addListener(RoutersGameTests::registerTests);
 
         if (Dist.CLIENT.isClient()) {
             eventBus.addListener(this::onClientSetup);

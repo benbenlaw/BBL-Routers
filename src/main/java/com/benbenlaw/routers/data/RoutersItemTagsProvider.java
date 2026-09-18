@@ -19,8 +19,8 @@ public class RoutersItemTagsProvider extends ItemTagsProvider {
     @Override
     protected void addTags(HolderLookup.@NotNull Provider provider) {
 
-        //All Upgrades
-        this.tag(RoutersTags.Items.UPGRADES)
+        //Exporter Upgrades (everything the exporter's upgrade row accepts)
+        this.tag(RoutersTags.Items.EXPORTER_UPGRADES)
                 .addTag(RoutersTags.Items.ITEM_UPGRADES)
                 .addTag(RoutersTags.Items.FLUID_UPGRADES)
                 .addTag(RoutersTags.Items.RF_UPGRADES)
@@ -28,9 +28,22 @@ public class RoutersItemTagsProvider extends ItemTagsProvider {
                 .addTag(RoutersTags.Items.DIMENSIONAL_UPGRADES)
                 .addTag(RoutersTags.Items.ROUND_ROBIN_UPGRADES)
 
-                .add(RoutersItems.DIMENSIONAL_UPGRADE.get())
                 .add(RoutersItems.BLACKLIST_UPGRADE.get())
                 .add(RoutersItems.IGNORE_NBT_UPGRADE.get())
+        ;
+
+        //Importer Upgrades (everything the importer's upgrade row accepts)
+        this.tag(RoutersTags.Items.IMPORTER_UPGRADES)
+                .addTag(RoutersTags.Items.ROUND_ROBIN_UPGRADES)
+
+                .add(RoutersItems.BLACKLIST_UPGRADE.get())
+                .add(RoutersItems.IGNORE_NBT_UPGRADE.get())
+        ;
+
+        //All Upgrades (union, for general grouping/JEI)
+        this.tag(RoutersTags.Items.UPGRADES)
+                .addTag(RoutersTags.Items.EXPORTER_UPGRADES)
+                .addTag(RoutersTags.Items.IMPORTER_UPGRADES)
         ;
 
         //Wrenches

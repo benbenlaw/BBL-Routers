@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
 
@@ -25,10 +26,9 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     protected void init() {
         super.init();
         MousePositionManagerUtil.setLastKnownPosition();
-        addRenderableWidget(BackButton.create(getGuiLeft() + 151, getGuiTop() + 4, 20, 20, menu.blockEntity));
+        addRenderableWidget(BackButton.create(getGuiLeft() + 151, getGuiTop() + 4, 20, 20, (BlockEntity) menu.blockEntity));
     }
 
-    // Helper methods for cleaner code
     public int getGuiLeft() { return (width - imageWidth) / 2; }
     public int getGuiTop() { return (height - imageHeight) / 2; }
     public int getXSize() { return imageWidth; }
@@ -37,10 +37,8 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     public void extractBackground(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float a) {
         super.extractBackground(guiGraphics, mouseX, mouseY, a);
 
-        // 1. Draw main GUI background
         guiGraphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, getGuiLeft(), getGuiTop(), 0, 0, imageWidth, imageHeight, 256, 256);
 
-        // 2. Draw module-specific background (like slot grids)
         RouterUIRenderers.get(menu.buttonType).ifPresent(renderer ->
                 renderer.renderBackground(guiGraphics, this)
         );
@@ -50,7 +48,6 @@ public class FilterScreen extends AbstractContainerScreen<FilterMenu> {
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
 
-        // 3. Draw module-specific extras (like fluid icons or energy text)
         RouterUIRenderers.get(menu.buttonType).ifPresent(renderer ->
                 renderer.renderExtra(guiGraphics, this, menu.blockEntity, mouseX, mouseY)
         );
