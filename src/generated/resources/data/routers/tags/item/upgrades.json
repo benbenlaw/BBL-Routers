@@ -1,0 +1,6 @@
+{
+  "values": [
+    "#routers:upgrades/exporter",
+    "#routers:upgrades/importer"
+  ]
+}
