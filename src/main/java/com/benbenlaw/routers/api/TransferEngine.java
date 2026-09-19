@@ -16,7 +16,7 @@ public class TransferEngine {
 
         if (isRoundRobin) {
             for (int i = 0; i < size; i++) {
-                if (level.getBlockState(importers.get(lastIndex).pos()).getBlock() instanceof RouterBlock) {
+                if (level.getBlockState(importers.get((lastIndex + i) % size).pos()).getBlock() instanceof RouterBlock) {
                     int currentIndex = (lastIndex + i) % size;
                     boolean isWorking = level.getBlockState(importers.get(currentIndex).pos()).getValue(RouterBlock.WORKING);
                     if (isWorking && !pullsOwnResources(level, importers.get(currentIndex))) {
