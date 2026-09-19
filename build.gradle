@@ -91,6 +91,16 @@ dependencies {
     runtimeOnly("curse.maven:applied-energistics-2-223794:8041962")
     //Guide ME
     runtimeOnly("curse.maven:guideme-1173950:7929350")
+    //Observable
+    runtimeOnly("curse.maven:observable-remake-1639360:8589511")
+    //sophisticated-core
+    runtimeOnly("curse.maven:sophisticated-core-618298:8838837")
+    //sophisticated-storage
+    runtimeOnly("curse.maven:sophisticated-storage-619320:8885402")
+    //sophisticated-storage
+    runtimeOnly("curse.maven:functional-storage-556861:8723367")
+    //titanium
+    runtimeOnly("curse.maven:titanium-287342:8671128")
 }
 
 tasks.withType(ProcessResources).configureEach {

@@ -15,9 +15,13 @@ import com.benbenlaw.routers.config.StartupConfig;
 import com.benbenlaw.routers.item.RoutersItems;
 import com.benbenlaw.routers.screen.ImporterMenu;
 import com.benbenlaw.routers.screen.util.button.ButtonType;
+import com.benbenlaw.routers.util.ConnectedResources;
+import com.benbenlaw.routers.util.LinkedCapabilityCache;
+import com.benbenlaw.routers.util.ResourceScanState;
 import com.benbenlaw.routers.util.RoutersTags;
 import com.benbenlaw.routers.util.UpgradeUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -31,6 +35,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
@@ -52,6 +60,16 @@ public class ImporterBlockEntity extends SyncableBlockEntity implements MenuProv
     public boolean isRoundRobin;
     private Set<Identifier> linkedUnlockedButtons = new HashSet<>();
     public int lastExporterIndex = 0;
+
+    private ConnectedResources connectedResources;
+
+    private final LinkedCapabilityCache<ResourceHandler<ItemResource>> itemSourceCache = new LinkedCapabilityCache<>(Capabilities.Item.BLOCK);
+    private final LinkedCapabilityCache<ResourceHandler<FluidResource>> fluidSourceCache = new LinkedCapabilityCache<>(Capabilities.Fluid.BLOCK);
+    private final LinkedCapabilityCache<EnergyHandler> energySourceCache = new LinkedCapabilityCache<>(Capabilities.Energy.BLOCK);
+
+    private final ResourceScanState itemScanState = new ResourceScanState();
+    private final ResourceScanState fluidScanState = new ResourceScanState();
+    private final ResourceScanState energyScanState = new ResourceScanState();
 
     private final SyncableItemHandler upgradeItemHandler = new SyncableItemHandler(this, 9, (i, stack) ->
             stack.is(RoutersTags.Items.IMPORTER_UPGRADES) && !hasUpgradeTypeAlready(stack), i -> false) {
@@ -83,6 +101,7 @@ public class ImporterBlockEntity extends SyncableBlockEntity implements MenuProv
             }
 
             super.onContentsChanged(index, previousContents);
+            recomputeLinkedUpgrades();
         }
     };
 
@@ -125,14 +144,12 @@ public class ImporterBlockEntity extends SyncableBlockEntity implements MenuProv
             BlockState currentState = level.getBlockState(worldPosition);
             if (!currentState.hasProperty(RouterBlock.WORKING) || !currentState.getValue(RouterBlock.WORKING)) return;
 
-            if (level.getGameTime() % StartupConfig.defaultSpeedPerOperation.get() == 0) {
+            if ((level.getGameTime() + worldPosition.hashCode()) % StartupConfig.defaultSpeedPerOperation.get() == 0) {
                 pullResources();
             }
         }
     }
 
-    // Only reached when this importer has its own Round Robin upgrade - see TransferEngine.pullsOwnResources
-    // for why linked exporters don't also independently push to it in that case.
     private void pullResources() {
         ServerLevel serverLevel = (ServerLevel) level;
         lastExporterIndex = ItemTransfer.pullItems(serverLevel, this);
@@ -153,6 +170,7 @@ public class ImporterBlockEntity extends SyncableBlockEntity implements MenuProv
     public void recomputeLinkedUpgrades() {
         if (level == null || level.isClientSide() || level.getServer() == null) return;
 
+        GlobalPos thisPos = GlobalPos.of(level.dimension(), worldPosition);
         Set<Identifier> unlocked = new HashSet<>();
         for (GlobalPos pos : exporterPositions) {
             ServerLevel exporterLevel = level.getServer().getLevel(pos.dimension());
@@ -164,6 +182,8 @@ public class ImporterBlockEntity extends SyncableBlockEntity implements MenuProv
                         unlocked.add(type.getId());
                     }
                 }
+
+                exporter.setImporterPullsOwnResources(thisPos, isRoundRobin);
             }
         }
 
@@ -184,6 +204,9 @@ public class ImporterBlockEntity extends SyncableBlockEntity implements MenuProv
         setChanged();
         notifyClient();
         recomputeLinkedUpgrades();
+        itemSourceCache.remove(exporterGlobalPos);
+        fluidSourceCache.remove(exporterGlobalPos);
+        energySourceCache.remove(exporterGlobalPos);
         return true;
     }
 
@@ -194,6 +217,9 @@ public class ImporterBlockEntity extends SyncableBlockEntity implements MenuProv
             setChanged();
             notifyClient();
             recomputeLinkedUpgrades();
+            itemSourceCache.remove(exporterGlobalPos);
+            fluidSourceCache.remove(exporterGlobalPos);
+            energySourceCache.remove(exporterGlobalPos);
         }
         return removed;
     }
@@ -223,6 +249,38 @@ public class ImporterBlockEntity extends SyncableBlockEntity implements MenuProv
 
     public SyncableItemHandler getUpgradeItemHandler() {
         return upgradeItemHandler;
+    }
+
+    public ConnectedResources getConnectedResources() {
+        if (connectedResources == null) {
+            Direction facing = level.getBlockState(worldPosition).getValue(RouterBlock.FACING);
+            connectedResources = new ConnectedResources((ServerLevel) level, worldPosition.relative(facing), facing.getOpposite());
+        }
+        return connectedResources;
+    }
+
+    public LinkedCapabilityCache<ResourceHandler<ItemResource>> getItemSourceCache() {
+        return itemSourceCache;
+    }
+
+    public LinkedCapabilityCache<ResourceHandler<FluidResource>> getFluidSourceCache() {
+        return fluidSourceCache;
+    }
+
+    public LinkedCapabilityCache<EnergyHandler> getEnergySourceCache() {
+        return energySourceCache;
+    }
+
+    public ResourceScanState getItemScanState() {
+        return itemScanState;
+    }
+
+    public ResourceScanState getFluidScanState() {
+        return fluidScanState;
+    }
+
+    public ResourceScanState getEnergyScanState() {
+        return energyScanState;
     }
 
     @Override

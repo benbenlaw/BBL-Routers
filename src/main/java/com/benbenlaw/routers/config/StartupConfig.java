@@ -36,6 +36,10 @@ public class StartupConfig {
     public static final ModConfigSpec.ConfigValue<Integer> speedPerOperation3;
     public static final ModConfigSpec.ConfigValue<Integer> speedPerOperation4;
 
+    public static final ModConfigSpec.ConfigValue<Integer> maxInventoryScanPerOperation;
+    public static final ModConfigSpec.ConfigValue<Integer> minBackoffTicks;
+    public static final ModConfigSpec.ConfigValue<Integer> maxBackoffTicks;
+
     public static final ModConfigSpec.ConfigValue<Integer> sourcePerOperation1;
     public static final ModConfigSpec.ConfigValue<Integer> sourcePerOperation2;
     public static final ModConfigSpec.ConfigValue<Integer> sourcePerOperation3;
@@ -144,6 +148,28 @@ public class StartupConfig {
         speedPerOperation4 = BUILDER
                 .comment("The speed multiplier that tier 4 can provide.")
                 .defineInRange("Speed Per Operation 4", 1, 1, Integer.MAX_VALUE);
+
+        BUILDER.pop();
+
+        BUILDER.push("Performance");
+
+        maxInventoryScanPerOperation = BUILDER
+                .comment("The maximum number of slots an exporter/importer will scan in a single operation when looking for a match. ",
+                        "Large storage inventories (hundreds or thousands of slots) get scanned across multiple operations instead of all at once, to keep any single tick cheap. ",
+                        "Lower this if you have very large storages and are seeing lag from routers connected to them; raise it if you'd rather have routers find matches faster at the cost of a heavier tick.")
+                .defineInRange("Max Inventory Scan Per Operation", 256, 1, Integer.MAX_VALUE);
+
+        minBackoffTicks = BUILDER
+                .comment("When an exporter/importer finds nothing to move for a resource type (nothing matches, or everything that ",
+                        "matches gets rejected), it waits at least this many real ticks before checking that type again - regardless of ",
+                        "speed tier, so a Speed 4 router backing off still gets a meaningful break instead of retrying almost immediately. ",
+                        "This also doubles as the growth step: each consecutive miss adds another one of these, up to Max Backoff Ticks. ",
+                        "Resets instantly to checking every operation the moment something actually moves. Set to 0 to disable backoff entirely.")
+                .defineInRange("Min Backoff Ticks", 20, 0, Integer.MAX_VALUE);
+
+        maxBackoffTicks = BUILDER
+                .comment("The upper cap on how many ticks a persistently empty/blocked exporter or importer will wait between checks for one resource type.")
+                .defineInRange("Max Backoff Ticks", 400, 0, Integer.MAX_VALUE);
 
         BUILDER.pop();
 

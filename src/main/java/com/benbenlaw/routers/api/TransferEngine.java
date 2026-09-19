@@ -41,8 +41,6 @@ public class TransferEngine {
         return lastIndex;
     }
 
-    // An importer with its own Round Robin upgrade actively pulls from its linked exporters itself,
-    // so the exporter must not also push to it (that would double up the transfer).
     private static boolean pullsOwnResources(ServerLevel level, GlobalPos importerPos) {
         return level.getBlockEntity(importerPos.pos()) instanceof ImporterBlockEntity importer && importer.isRoundRobin;
     }

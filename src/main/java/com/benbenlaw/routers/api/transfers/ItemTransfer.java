@@ -3,21 +3,20 @@ package com.benbenlaw.routers.api.transfers;
 import com.benbenlaw.core.block.entity.handler.item.FilterItemHandler;
 import com.benbenlaw.routers.api.ImporterPullEngine;
 import com.benbenlaw.routers.api.TransferEngine;
-import com.benbenlaw.routers.block.custom.RouterBlock;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.block.entity.ImporterBlockEntity;
 import com.benbenlaw.routers.item.FilterItem;
 import com.benbenlaw.routers.item.FilterType;
 import com.benbenlaw.routers.item.RoutersDataComponents;
+import com.benbenlaw.routers.config.StartupConfig;
 import com.benbenlaw.routers.util.RoutersTags;
-import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
 import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import javax.annotation.Nullable;
 
@@ -25,27 +24,26 @@ public class ItemTransfer {
 
     public static int transferItems(ServerLevel level, ExporterBlockEntity exporter) {
 
-        var state = level.getBlockState(exporter.getBlockPos());
-        Direction facing = state.getValue(RouterBlock.FACING);
+        if (exporter.getItemScanState().shouldSkip(level.getGameTime())) return exporter.lastImporterIndex;
 
-        ResourceHandler<ItemResource> source = exporter.getConnectedResources().getItemHandler(
-                level, exporter.getBlockPos().relative(facing), facing.getOpposite()
-        ).orElse(null);
+        ResourceHandler<ItemResource> source = exporter.getConnectedResources().getItemHandler();
 
         if (source == null || source.size() == 0) return exporter.lastImporterIndex;
 
-        return TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin, exporter.lastImporterIndex,
+        boolean[] moved = {false};
+
+        int result = TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin, exporter.lastImporterIndex,
                 (srvLevel, entity, targetPos) -> {
 
                     ResourceHandler<ItemResource> target = getTargetHandler(srvLevel, entity, targetPos);
                     if (target == null) return false;
 
                     ImporterBlockEntity importer = srvLevel.getBlockEntity(targetPos.pos()) instanceof ImporterBlockEntity imp ? imp : null;
-                    ResourceHandler<ItemResource> importerAdjacentHandler = importer != null
-                            ? getImporterAdjacentHandler(srvLevel, importer)
-                            : null;
 
-                    var moved = ResourceHandlerUtil.moveFirst(source, target, resource -> {
+                    int amount = entity.getUpgradeValue(RoutersTags.Items.ITEM_UPGRADES);
+                    int start = entity.getItemScanState().nextScanStart(source.size());
+
+                    boolean success = moveFirstBounded(source, target, start, amount, resource -> {
                         boolean isWhitelist = !entity.isBlacklist();
 
                         if (!ResourceHandlerUtil.isEmpty(entity.getFilterItemHandler())) {
@@ -56,40 +54,46 @@ public class ItemTransfer {
 
                         if (importer != null && !ResourceHandlerUtil.isEmpty(importer.getFilterItemHandler())) {
                             boolean importerIsWhitelist = !importer.isBlacklist();
-                            if (!checkImporterFilter(importer.getFilterItemHandler(), resource, importerIsWhitelist, importer.isIgnoreNbt(), importerAdjacentHandler)) {
+                            if (!checkImporterFilter(importer.getFilterItemHandler(), resource, importerIsWhitelist, importer.isIgnoreNbt(), target)) {
                                 return false;
                             }
                         }
 
                         return true;
-                    }, entity.getUpgradeValue(RoutersTags.Items.ITEM_UPGRADES), null);
-
-                    return moved != null && moved.amount() > 0;
+                    });
+                    moved[0] |= success;
+                    return success;
                 });
+
+        exporter.getItemScanState().recordResult(level.getGameTime(), source.size(), moved[0]);
+        return result;
     }
 
-    // Driven by the importer's own tick when it has a Round Robin upgrade - it actively pulls
-    // from its linked exporters instead of waiting for them to push (see TransferEngine.pullsOwnResources).
     public static int pullItems(ServerLevel level, ImporterBlockEntity importer) {
 
-        var state = level.getBlockState(importer.getBlockPos());
-        Direction facing = state.getValue(RouterBlock.FACING);
+        if (importer.getItemScanState().shouldSkip(level.getGameTime())) return importer.lastExporterIndex;
 
-        ResourceHandler<ItemResource> target = level.getCapability(Capabilities.Item.BLOCK,
-                importer.getBlockPos().relative(facing), facing.getOpposite());
+        ResourceHandler<ItemResource> target = importer.getConnectedResources().getItemHandler();
 
         if (target == null || target.size() == 0) return importer.lastExporterIndex;
 
-        return ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
+        boolean[] moved = {false};
+        int[] lastSourceSize = {1};
+
+        int result = ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
                 (srvLevel, imp, exporterPos) -> {
 
                     ExporterBlockEntity exporter = getExporterAt(srvLevel, exporterPos);
                     if (exporter == null || !exporter.hasCorrectUpgrade(RoutersTags.Items.ITEM_UPGRADES)) return false;
 
-                    ResourceHandler<ItemResource> source = getSourceHandler(srvLevel, exporter, exporterPos);
+                    ResourceHandler<ItemResource> source = getSourceHandler(srvLevel, exporter, imp, exporterPos);
                     if (source == null) return false;
 
-                    var moved = ResourceHandlerUtil.moveFirst(source, target, resource -> {
+                    int amount = exporter.getUpgradeValue(RoutersTags.Items.ITEM_UPGRADES);
+                    lastSourceSize[0] = Math.max(source.size(), 1);
+                    int start = imp.getItemScanState().nextScanStart(lastSourceSize[0]);
+
+                    boolean success = moveFirstBounded(source, target, start, amount, resource -> {
                         boolean isWhitelist = !exporter.isBlacklist();
 
                         if (!ResourceHandlerUtil.isEmpty(exporter.getFilterItemHandler())) {
@@ -106,10 +110,43 @@ public class ItemTransfer {
                         }
 
                         return true;
-                    }, exporter.getUpgradeValue(RoutersTags.Items.ITEM_UPGRADES), null);
-
-                    return moved != null && moved.amount() > 0;
+                    });
+                    moved[0] |= success;
+                    return success;
                 });
+
+        importer.getItemScanState().recordResult(level.getGameTime(), lastSourceSize[0], moved[0]);
+        return result;
+    }
+
+    private interface ItemPredicate {
+        boolean test(ItemResource resource);
+    }
+
+    private static boolean moveFirstBounded(ResourceHandler<ItemResource> source, ResourceHandler<ItemResource> target,
+                                             int start, int amount, ItemPredicate predicate) {
+        if (amount <= 0) return false;
+
+        int size = source.size();
+        int scanLimit = Math.min(size, StartupConfig.maxInventoryScanPerOperation.get());
+
+        for (int offset = 0; offset < scanLimit; offset++) {
+            int slot = (start + offset) % size;
+            ItemResource resource = source.getResource(slot);
+            if (resource.isEmpty()) continue;
+            if (!predicate.test(resource)) continue;
+
+            try (Transaction tx = Transaction.open(null)) {
+                int available = (int) Math.min(source.getAmountAsLong(slot), amount);
+                int accepted = target.insert(resource, available, tx);
+
+                if (accepted > 0 && source.extract(slot, resource, accepted, tx) > 0) {
+                    tx.commit();
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Nullable
@@ -120,15 +157,13 @@ public class ItemTransfer {
     }
 
     @Nullable
-    private static ResourceHandler<ItemResource> getSourceHandler(ServerLevel importerLevel, ExporterBlockEntity exporter, GlobalPos exporterPos) {
+    private static ResourceHandler<ItemResource> getSourceHandler(ServerLevel importerLevel, ExporterBlockEntity exporter, ImporterBlockEntity importer, GlobalPos exporterPos) {
         if (!exporterPos.dimension().equals(importerLevel.dimension()) && !exporter.canDoDimensionalTravel()) return null;
 
         ServerLevel exporterLevel = importerLevel.getServer().getLevel(exporterPos.dimension());
-        if (exporterLevel == null) return null;
+        if (exporterLevel == null || !exporterLevel.isLoaded(exporterPos.pos())) return null;
 
-        var state = exporterLevel.getBlockState(exporterPos.pos());
-        Direction facing = state.getValue(RouterBlock.FACING);
-        return exporterLevel.getCapability(Capabilities.Item.BLOCK, exporterPos.pos().relative(facing), facing.getOpposite());
+        return importer.getItemSourceCache().get(exporterLevel, exporterPos);
     }
 
     private static boolean checkFilter(FilterItemHandler filterHandler, ItemResource resource, boolean isWhitelist, boolean ignoreNbt) {
@@ -216,20 +251,11 @@ public class ItemTransfer {
         return count;
     }
 
-    @Nullable
-    private static ResourceHandler<ItemResource> getImporterAdjacentHandler(ServerLevel level, ImporterBlockEntity importer) {
-        var state = level.getBlockState(importer.getBlockPos());
-        Direction facing = state.getValue(RouterBlock.FACING);
-        return level.getCapability(Capabilities.Item.BLOCK, importer.getBlockPos().relative(facing), facing.getOpposite());
-    }
-
     private static ResourceHandler<ItemResource> getTargetHandler(ServerLevel level, ExporterBlockEntity exporter, GlobalPos pos) {
         ServerLevel targetLevel = level.getServer().getLevel(pos.dimension());
         if (targetLevel == null || (!pos.dimension().equals(level.dimension()) && !exporter.canDoDimensionalTravel())) return null;
         if (!targetLevel.isLoaded(pos.pos())) return null;
 
-        var state = targetLevel.getBlockState(pos.pos());
-        Direction facing = state.getValue(RouterBlock.FACING);
-        return targetLevel.getCapability(Capabilities.Item.BLOCK, pos.pos().relative(facing), facing.getOpposite());
+        return exporter.getItemTargetCache().get(targetLevel, pos);
     }
 }

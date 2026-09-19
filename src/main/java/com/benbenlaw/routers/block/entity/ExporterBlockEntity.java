@@ -15,6 +15,8 @@ import com.benbenlaw.routers.screen.ExporterMenu;
 import com.benbenlaw.routers.screen.util.button.ButtonType;
 import com.benbenlaw.routers.transfers.RoutersTransfers;
 import com.benbenlaw.routers.util.ConnectedResources;
+import com.benbenlaw.routers.util.LinkedCapabilityCache;
+import com.benbenlaw.routers.util.ResourceScanState;
 import com.benbenlaw.routers.util.RoutersTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,13 +35,19 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProvider, ConfigurableRouterBlockEntity {
 
@@ -96,6 +104,16 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
 
     private ConnectedResources connectedResources;
     public int lastImporterIndex = 0;
+
+    private final LinkedCapabilityCache<ResourceHandler<ItemResource>> itemTargetCache = new LinkedCapabilityCache<>(Capabilities.Item.BLOCK);
+    private final LinkedCapabilityCache<ResourceHandler<FluidResource>> fluidTargetCache = new LinkedCapabilityCache<>(Capabilities.Fluid.BLOCK);
+    private final LinkedCapabilityCache<EnergyHandler> energyTargetCache = new LinkedCapabilityCache<>(Capabilities.Energy.BLOCK);
+
+    private final Set<GlobalPos> importerSelfPullSet = new HashSet<>();
+
+    private final ResourceScanState itemScanState = new ResourceScanState();
+    private final ResourceScanState fluidScanState = new ResourceScanState();
+    private final ResourceScanState energyScanState = new ResourceScanState();
 
     public ExporterBlockEntity(BlockPos pos, BlockState state) {
         super(RoutersBlockEntities.EXPORTER_BLOCK_ENTITY.get(), pos, state);
@@ -173,15 +191,10 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
             exporterPos = GlobalPos.of(level.dimension(), this.worldPosition);
         }
 
-        if (connectedResources == null) {
-            connectedResources = getConnectedResources();
-        }
+        getConnectedResources();
 
-        if (connectedResources != null) {
-
-            if (level.getGameTime() % getSpeedPerOperation() == 0) {
-                moveResources();
-            }
+        if ((level.getGameTime() + worldPosition.hashCode()) % getSpeedPerOperation() == 0) {
+            moveResources();
         }
     }
 
@@ -245,7 +258,47 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
     }
 
     public ConnectedResources getConnectedResources() {
-        return connectedResources = new ConnectedResources(new GlobalPos(exporterPos.dimension(), getTargetBlockPos(worldPosition)));
+        if (connectedResources == null) {
+            Direction facing = level.getBlockState(worldPosition).getValue(RouterBlock.FACING);
+            connectedResources = new ConnectedResources((ServerLevel) level, worldPosition.relative(facing), facing.getOpposite());
+        }
+        return connectedResources;
+    }
+
+    public LinkedCapabilityCache<ResourceHandler<ItemResource>> getItemTargetCache() {
+        return itemTargetCache;
+    }
+
+    public LinkedCapabilityCache<ResourceHandler<FluidResource>> getFluidTargetCache() {
+        return fluidTargetCache;
+    }
+
+    public LinkedCapabilityCache<EnergyHandler> getEnergyTargetCache() {
+        return energyTargetCache;
+    }
+
+    public boolean importerPullsOwnResources(GlobalPos importerPos) {
+        return importerSelfPullSet.contains(importerPos);
+    }
+
+    public void setImporterPullsOwnResources(GlobalPos importerPos, boolean pullsOwnResources) {
+        if (pullsOwnResources) {
+            importerSelfPullSet.add(importerPos);
+        } else {
+            importerSelfPullSet.remove(importerPos);
+        }
+    }
+
+    public ResourceScanState getItemScanState() {
+        return itemScanState;
+    }
+
+    public ResourceScanState getFluidScanState() {
+        return fluidScanState;
+    }
+
+    public ResourceScanState getEnergyScanState() {
+        return energyScanState;
     }
 
     public InputItemHandler getUpgradeItemHandler() {
@@ -281,6 +334,11 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
             setChanged();
         }
 
+        itemTargetCache.remove(clickedPos);
+        fluidTargetCache.remove(clickedPos);
+        energyTargetCache.remove(clickedPos);
+        importerSelfPullSet.remove(clickedPos);
+
         if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
 
@@ -289,6 +347,7 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
                 GlobalPos thisExporterPos = GlobalPos.of(level.dimension(), this.worldPosition);
                 if (added) {
                     importer.addExporterPosition(thisExporterPos);
+                    setImporterPullsOwnResources(clickedPos, importer.isRoundRobin);
                 } else {
                     importer.removeExporterPosition(thisExporterPos);
                 }
@@ -304,6 +363,10 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
                 pos.dimension().equals(importerGlobalPos.dimension()) && pos.pos().equals(importerGlobalPos.pos()));
         if (removed) {
             setChanged();
+            itemTargetCache.remove(importerGlobalPos);
+            fluidTargetCache.remove(importerGlobalPos);
+            energyTargetCache.remove(importerGlobalPos);
+            importerSelfPullSet.remove(importerGlobalPos);
             if (level != null && !level.isClientSide()) {
                 level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
             }

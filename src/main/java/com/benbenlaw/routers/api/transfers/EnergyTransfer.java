@@ -2,14 +2,11 @@ package com.benbenlaw.routers.api.transfers;
 
 import com.benbenlaw.routers.api.ImporterPullEngine;
 import com.benbenlaw.routers.api.TransferEngine;
-import com.benbenlaw.routers.block.custom.RouterBlock;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.block.entity.ImporterBlockEntity;
 import com.benbenlaw.routers.util.RoutersTags;
-import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 
@@ -19,15 +16,17 @@ public class EnergyTransfer {
 
     public static int transferEnergy(ServerLevel level, ExporterBlockEntity exporter) {
 
+        if (exporter.getEnergyScanState().shouldSkip(level.getGameTime())) return exporter.lastImporterIndex;
+
         int amount = exporter.getUpgradeValue(RoutersTags.Items.RF_UPGRADES);
-        EnergyHandler source = exporter.getConnectedResources().getEnergyHandler(
-                level, exporter.getBlockPos().relative(level.getBlockState(exporter.getBlockPos()).getValue(RouterBlock.FACING)),
-                level.getBlockState(exporter.getBlockPos()).getValue(RouterBlock.FACING).getOpposite()
-        ).orElse(null);
+        EnergyHandler source = exporter.getConnectedResources().getEnergyHandler();
 
         if (source == null || source.getAmountAsLong() <= 0) return exporter.lastImporterIndex;
 
-        return TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin, exporter.lastImporterIndex,
+        boolean[] moved = {false};
+        exporter.getEnergyScanState().nextScanStart(1);
+
+        int result = TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin, exporter.lastImporterIndex,
                 (srvLevel, entity, targetGlobalPos) -> {
 
                     EnergyHandler target = getTargetHandler(srvLevel, entity, targetGlobalPos);
@@ -40,11 +39,15 @@ public class EnergyTransfer {
                         int accepted = target.insert(extracted, tx);
                         if (accepted > 0) {
                             tx.commit();
+                            moved[0] = true;
                             return true;
                         }
                     }
                     return false;
                 });
+
+        exporter.getEnergyScanState().recordResult(level.getGameTime(), 1, moved[0]);
+        return result;
     }
 
     private static EnergyHandler getTargetHandler(ServerLevel level, ExporterBlockEntity exporter, GlobalPos pos) {
@@ -52,30 +55,27 @@ public class EnergyTransfer {
         if (targetLevel == null || (!pos.dimension().equals(level.dimension()) && !exporter.canDoDimensionalTravel())) return null;
         if (!targetLevel.isLoaded(pos.pos()) || !(targetLevel.getBlockEntity(pos.pos()) instanceof ImporterBlockEntity)) return null;
 
-        var state = targetLevel.getBlockState(pos.pos());
-        Direction facing = state.getValue(RouterBlock.FACING).getOpposite();
-        return targetLevel.getCapability(Capabilities.Energy.BLOCK, pos.pos().relative(state.getValue(RouterBlock.FACING)), facing);
+        return exporter.getEnergyTargetCache().get(targetLevel, pos);
     }
 
-    // Driven by the importer's own tick when it has a Round Robin upgrade - it actively pulls
-    // from its linked exporters instead of waiting for them to push (see TransferEngine.pullsOwnResources).
     public static int pullEnergy(ServerLevel level, ImporterBlockEntity importer) {
 
-        var state = level.getBlockState(importer.getBlockPos());
-        Direction facing = state.getValue(RouterBlock.FACING);
+        if (importer.getEnergyScanState().shouldSkip(level.getGameTime())) return importer.lastExporterIndex;
 
-        EnergyHandler target = level.getCapability(Capabilities.Energy.BLOCK,
-                importer.getBlockPos().relative(facing), facing.getOpposite());
+        EnergyHandler target = importer.getConnectedResources().getEnergyHandler();
 
         if (target == null) return importer.lastExporterIndex;
 
-        return ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
+        boolean[] moved = {false};
+        importer.getEnergyScanState().nextScanStart(1);
+
+        int result = ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
                 (srvLevel, imp, exporterPos) -> {
 
                     ExporterBlockEntity exporter = getExporterAt(srvLevel, exporterPos);
                     if (exporter == null || !exporter.hasCorrectUpgrade(RoutersTags.Items.RF_UPGRADES)) return false;
 
-                    EnergyHandler source = getSourceHandler(srvLevel, exporter, exporterPos);
+                    EnergyHandler source = getSourceHandler(srvLevel, exporter, imp, exporterPos);
                     if (source == null || source.getAmountAsLong() <= 0) return false;
 
                     int amount = exporter.getUpgradeValue(RoutersTags.Items.RF_UPGRADES);
@@ -87,11 +87,15 @@ public class EnergyTransfer {
                         int accepted = target.insert(extracted, tx);
                         if (accepted > 0) {
                             tx.commit();
+                            moved[0] = true;
                             return true;
                         }
                     }
                     return false;
                 });
+
+        importer.getEnergyScanState().recordResult(level.getGameTime(), 1, moved[0]);
+        return result;
     }
 
     @Nullable
@@ -102,14 +106,12 @@ public class EnergyTransfer {
     }
 
     @Nullable
-    private static EnergyHandler getSourceHandler(ServerLevel importerLevel, ExporterBlockEntity exporter, GlobalPos exporterPos) {
+    private static EnergyHandler getSourceHandler(ServerLevel importerLevel, ExporterBlockEntity exporter, ImporterBlockEntity importer, GlobalPos exporterPos) {
         if (!exporterPos.dimension().equals(importerLevel.dimension()) && !exporter.canDoDimensionalTravel()) return null;
 
         ServerLevel exporterLevel = importerLevel.getServer().getLevel(exporterPos.dimension());
-        if (exporterLevel == null) return null;
+        if (exporterLevel == null || !exporterLevel.isLoaded(exporterPos.pos())) return null;
 
-        var state = exporterLevel.getBlockState(exporterPos.pos());
-        Direction facing = state.getValue(RouterBlock.FACING);
-        return exporterLevel.getCapability(Capabilities.Energy.BLOCK, exporterPos.pos().relative(facing), facing.getOpposite());
+        return importer.getEnergySourceCache().get(exporterLevel, exporterPos);
     }
 }

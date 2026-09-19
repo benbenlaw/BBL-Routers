@@ -2,43 +2,40 @@ package com.benbenlaw.routers.util;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.GlobalPos;
-import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerLevel;
+import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 
-import java.util.List;
-import java.util.Optional;
+import javax.annotation.Nullable;
 
 public class ConnectedResources {
 
-    private final GlobalPos targetPos;
+    private final BlockCapabilityCache<ResourceHandler<ItemResource>, Direction> itemCache;
+    private final BlockCapabilityCache<ResourceHandler<FluidResource>, Direction> fluidCache;
+    private final BlockCapabilityCache<EnergyHandler, Direction> energyCache;
 
-    public ConnectedResources(GlobalPos targetPos) {
-        this.targetPos = targetPos;
+    public ConnectedResources(ServerLevel level, BlockPos pos, Direction side) {
+        this.itemCache = BlockCapabilityCache.create(Capabilities.Item.BLOCK, level, pos, side);
+        this.fluidCache = BlockCapabilityCache.create(Capabilities.Fluid.BLOCK, level, pos, side);
+        this.energyCache = BlockCapabilityCache.create(Capabilities.Energy.BLOCK, level, pos, side);
     }
 
-    public List<Optional<ResourceHandler<?>>> getAllHandlers(Level level, Direction side) {
-        BlockPos pos = targetPos.pos();
-        return List.of(
-                getItemHandler(level, pos, side).map(handler -> handler),
-                getFluidHandler(level, pos, side).map(handler -> handler)
-        );
+    @Nullable
+    public ResourceHandler<ItemResource> getItemHandler() {
+        return itemCache.getCapability();
     }
 
-    public Optional<ResourceHandler<ItemResource>> getItemHandler(Level level, BlockPos pos, Direction side) {
-        return Optional.ofNullable(level.getCapability(Capabilities.Item.BLOCK, pos, side));
+    @Nullable
+    public ResourceHandler<FluidResource> getFluidHandler() {
+        return fluidCache.getCapability();
     }
 
-    public Optional<ResourceHandler<FluidResource>> getFluidHandler(Level level, BlockPos pos, Direction side) {
-        return Optional.ofNullable(level.getCapability(Capabilities.Fluid.BLOCK, pos, side));
+    @Nullable
+    public EnergyHandler getEnergyHandler() {
+        return energyCache.getCapability();
     }
-    public Optional<EnergyHandler> getEnergyHandler(Level level, BlockPos pos, Direction side) {
-        return Optional.ofNullable(level.getCapability(Capabilities.Energy.BLOCK, pos, side));
-    }
-
-
 }

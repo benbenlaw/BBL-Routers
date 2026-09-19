@@ -2,14 +2,12 @@ package com.benbenlaw.routers.api.transfers;
 
 import com.benbenlaw.routers.api.ImporterPullEngine;
 import com.benbenlaw.routers.api.TransferEngine;
-import com.benbenlaw.routers.block.custom.RouterBlock;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.block.entity.ImporterBlockEntity;
+import com.benbenlaw.routers.config.StartupConfig;
 import com.benbenlaw.routers.util.RoutersTags;
-import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
-import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -21,25 +19,26 @@ public class FluidTransfer {
 
     public static int transferFluids(ServerLevel level, ExporterBlockEntity exporter) {
 
-        var state = level.getBlockState(exporter.getBlockPos());
-        Direction facing = state.getValue(RouterBlock.FACING);
+        if (exporter.getFluidScanState().shouldSkip(level.getGameTime())) return exporter.lastImporterIndex;
 
-        ResourceHandler<FluidResource> source = exporter.getConnectedResources().getFluidHandler(
-                level, exporter.getBlockPos().relative(facing), facing.getOpposite()
-        ).orElse(null);
+        ResourceHandler<FluidResource> source = exporter.getConnectedResources().getFluidHandler();
 
         if (source == null || source.size() == 0) return exporter.lastImporterIndex;
 
-        return TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin, exporter.lastImporterIndex,
+        boolean[] moved = {false};
+
+        int result = TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin, exporter.lastImporterIndex,
                 (srvLevel, entity, targetPos) -> {
 
                     ResourceHandler<FluidResource> target = getTargetHandler(srvLevel, entity, targetPos);
                     if (target == null) return false;
 
-                    for (int slot = 0; slot < source.size(); slot++) {
-                        FluidResource res = source.getResource(slot);
-                        if (res.isEmpty()) continue;
+                    ImporterBlockEntity importer = srvLevel.getBlockEntity(targetPos.pos()) instanceof ImporterBlockEntity imp ? imp : null;
 
+                    int amount = entity.getUpgradeValue(RoutersTags.Items.FLUID_UPGRADES);
+                    int start = entity.getFluidScanState().nextScanStart(source.size());
+
+                    boolean success = moveFirstBounded(source, target, start, amount, res -> {
                         boolean isWhitelist = !entity.isBlacklist();
                         boolean matches = true;
 
@@ -47,27 +46,19 @@ public class FluidTransfer {
                             matches = entity.getFilterFluidHandler().matchesFluid(FluidResource.of(res.toStack(1000)), isWhitelist, entity.isIgnoreNbt());
                         }
 
-                        if (matches && srvLevel.getBlockEntity(targetPos.pos()) instanceof ImporterBlockEntity importer) {
-                            if (!ResourceHandlerUtil.isEmpty(importer.getFilterFluidHandler())) {
-                                matches = importer.getFilterFluidHandler().matchesFluid(
-                                        FluidResource.of(res.toStack(1000)), !importer.isBlacklist(), importer.isIgnoreNbt());
-                            }
+                        if (matches && importer != null && !ResourceHandlerUtil.isEmpty(importer.getFilterFluidHandler())) {
+                            matches = importer.getFilterFluidHandler().matchesFluid(
+                                    FluidResource.of(res.toStack(1000)), !importer.isBlacklist(), importer.isIgnoreNbt());
                         }
 
-                        if (!matches) continue;
-
-                        try (Transaction tx = Transaction.open(null)) {
-                            int amount = Math.min(source.getAmountAsInt(slot), entity.getUpgradeValue(RoutersTags.Items.FLUID_UPGRADES));
-                            int accepted = target.insert(res, amount, tx);
-
-                            if (accepted > 0 && source.extract(slot, res, accepted, tx) > 0) {
-                                tx.commit();
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
+                        return matches;
+                    });
+                    moved[0] |= success;
+                    return success;
                 });
+
+        exporter.getFluidScanState().recordResult(level.getGameTime(), source.size(), moved[0]);
+        return result;
     }
 
     private static ResourceHandler<FluidResource> getTargetHandler(ServerLevel level, ExporterBlockEntity exporter, GlobalPos pos) {
@@ -75,36 +66,34 @@ public class FluidTransfer {
         if (targetLevel == null || (!pos.dimension().equals(level.dimension()) && !exporter.canDoDimensionalTravel())) return null;
         if (!targetLevel.isLoaded(pos.pos())) return null;
 
-        var state = targetLevel.getBlockState(pos.pos());
-        Direction facing = state.getValue(RouterBlock.FACING).getOpposite();
-        return targetLevel.getCapability(Capabilities.Fluid.BLOCK, pos.pos().relative(state.getValue(RouterBlock.FACING)), facing);
+        return exporter.getFluidTargetCache().get(targetLevel, pos);
     }
 
-    // Driven by the importer's own tick when it has a Round Robin upgrade - it actively pulls
-    // from its linked exporters instead of waiting for them to push (see TransferEngine.pullsOwnResources).
     public static int pullFluids(ServerLevel level, ImporterBlockEntity importer) {
 
-        var state = level.getBlockState(importer.getBlockPos());
-        Direction facing = state.getValue(RouterBlock.FACING);
+        if (importer.getFluidScanState().shouldSkip(level.getGameTime())) return importer.lastExporterIndex;
 
-        ResourceHandler<FluidResource> target = level.getCapability(Capabilities.Fluid.BLOCK,
-                importer.getBlockPos().relative(facing), facing.getOpposite());
+        ResourceHandler<FluidResource> target = importer.getConnectedResources().getFluidHandler();
 
         if (target == null) return importer.lastExporterIndex;
 
-        return ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
+        boolean[] moved = {false};
+        int[] lastSourceSize = {1};
+
+        int result = ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
                 (srvLevel, imp, exporterPos) -> {
 
                     ExporterBlockEntity exporter = getExporterAt(srvLevel, exporterPos);
                     if (exporter == null || !exporter.hasCorrectUpgrade(RoutersTags.Items.FLUID_UPGRADES)) return false;
 
-                    ResourceHandler<FluidResource> source = getSourceHandler(srvLevel, exporter, exporterPos);
+                    ResourceHandler<FluidResource> source = getSourceHandler(srvLevel, exporter, imp, exporterPos);
                     if (source == null) return false;
 
-                    for (int slot = 0; slot < source.size(); slot++) {
-                        FluidResource res = source.getResource(slot);
-                        if (res.isEmpty()) continue;
+                    int amount = exporter.getUpgradeValue(RoutersTags.Items.FLUID_UPGRADES);
+                    lastSourceSize[0] = Math.max(source.size(), 1);
+                    int start = imp.getFluidScanState().nextScanStart(lastSourceSize[0]);
 
+                    boolean success = moveFirstBounded(source, target, start, amount, res -> {
                         boolean isWhitelist = !exporter.isBlacklist();
                         boolean matches = true;
 
@@ -117,20 +106,44 @@ public class FluidTransfer {
                                     FluidResource.of(res.toStack(1000)), !imp.isBlacklist(), imp.isIgnoreNbt());
                         }
 
-                        if (!matches) continue;
-
-                        try (Transaction tx = Transaction.open(null)) {
-                            int amount = Math.min(source.getAmountAsInt(slot), exporter.getUpgradeValue(RoutersTags.Items.FLUID_UPGRADES));
-                            int accepted = target.insert(res, amount, tx);
-
-                            if (accepted > 0 && source.extract(slot, res, accepted, tx) > 0) {
-                                tx.commit();
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
+                        return matches;
+                    });
+                    moved[0] |= success;
+                    return success;
                 });
+
+        importer.getFluidScanState().recordResult(level.getGameTime(), lastSourceSize[0], moved[0]);
+        return result;
+    }
+
+    private interface FluidPredicate {
+        boolean test(FluidResource resource);
+    }
+
+    private static boolean moveFirstBounded(ResourceHandler<FluidResource> source, ResourceHandler<FluidResource> target,
+                                             int start, int amount, FluidPredicate predicate) {
+        if (amount <= 0) return false;
+
+        int size = source.size();
+        int scanLimit = Math.min(size, StartupConfig.maxInventoryScanPerOperation.get());
+
+        for (int offset = 0; offset < scanLimit; offset++) {
+            int slot = (start + offset) % size;
+            FluidResource res = source.getResource(slot);
+            if (res.isEmpty()) continue;
+            if (!predicate.test(res)) continue;
+
+            try (Transaction tx = Transaction.open(null)) {
+                int available = Math.min(source.getAmountAsInt(slot), amount);
+                int accepted = target.insert(res, available, tx);
+
+                if (accepted > 0 && source.extract(slot, res, accepted, tx) > 0) {
+                    tx.commit();
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Nullable
@@ -141,14 +154,12 @@ public class FluidTransfer {
     }
 
     @Nullable
-    private static ResourceHandler<FluidResource> getSourceHandler(ServerLevel importerLevel, ExporterBlockEntity exporter, GlobalPos exporterPos) {
+    private static ResourceHandler<FluidResource> getSourceHandler(ServerLevel importerLevel, ExporterBlockEntity exporter, ImporterBlockEntity importer, GlobalPos exporterPos) {
         if (!exporterPos.dimension().equals(importerLevel.dimension()) && !exporter.canDoDimensionalTravel()) return null;
 
         ServerLevel exporterLevel = importerLevel.getServer().getLevel(exporterPos.dimension());
-        if (exporterLevel == null) return null;
+        if (exporterLevel == null || !exporterLevel.isLoaded(exporterPos.pos())) return null;
 
-        var state = exporterLevel.getBlockState(exporterPos.pos());
-        Direction facing = state.getValue(RouterBlock.FACING);
-        return exporterLevel.getCapability(Capabilities.Fluid.BLOCK, exporterPos.pos().relative(facing), facing.getOpposite());
+        return importer.getFluidSourceCache().get(exporterLevel, exporterPos);
     }
 }
