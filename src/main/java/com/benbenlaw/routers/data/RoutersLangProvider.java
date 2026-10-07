@@ -169,15 +169,15 @@ public class RoutersLangProvider extends LanguageProvider {
         add("tooltip.routers.wrench_importer", "Linked Importer at %s");
 
         add("tooltip.routers.tag_filter", "Set to %s");
-        add("tooltip.routers.tag_filter_info", "Used to set a Tag as a filter");
+        add("tooltip.routers.tag_filter_info", "Used to set a Tag as a filter. Shift right click to open and set the stock amount");
         add("tooltip.routers.tag_filter_tooltip", "Enter tag...");
 
         add("tooltip.routers.mod_filter", "Set to %s");
-        add("tooltip.routers.mod_filter_info", "Used to set a Mod as a filter");
+        add("tooltip.routers.mod_filter_info", "Used to set a Mod as a filter. Shift right click to open and set the stock amount");
         add("tooltip.routers.mod_filter_tooltip", "Enter mod name...");
 
         add("tooltip.routers.stock_filter", "Set to %s with %s amount");
-        add("tooltip.routers.stock_filter_info", "Used in Importers to only allow up to the amount and item set inside");
+        add("tooltip.routers.stock_filter_info", "Used in Importers to only allow up to the amount and item set inside. Shift right click to open and set the stock amount");
         add("tooltip.routers.stock_filter_tooltip", "Enter item...");
 
         add("tooltip.routers.amount", "Max Amount");
