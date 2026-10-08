@@ -1,18 +1,28 @@
 package com.benbenlaw.routers.block.entity;
 
+import com.benbenlaw.core.block.entity.SyncableBlockEntity;
+import com.benbenlaw.core.block.entity.handler.fluid.FilterFluidHandler;
+import com.benbenlaw.core.block.entity.handler.item.FilterItemHandler;
+import com.benbenlaw.core.block.entity.handler.item.SyncableItemHandler;
+import com.benbenlaw.routers.api.ConfigurableRouterBlockEntity;
+import com.benbenlaw.routers.api.NamedRouter;
 import com.benbenlaw.routers.api.TransferModule;
 import com.benbenlaw.routers.block.RoutersBlockEntities;
 import com.benbenlaw.routers.block.custom.RouterBlock;
 import com.benbenlaw.routers.config.StartupConfig;
+import com.benbenlaw.routers.screen.DistributorMenu;
+import com.benbenlaw.routers.screen.util.button.ButtonType;
 import com.benbenlaw.routers.transfers.RoutersTransfers;
-import com.benbenlaw.routers.util.RoutersTags;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.storage.ValueInput;
@@ -29,9 +39,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DistributorBlockEntity extends ExporterBlockEntity implements ImporterHost {
+// Never ticks and has no storage or upgrades of its own. Exporters link to it like an importer, and whatever they push
+// into it is passed straight on to the machines around it. Like an Importer, its filter buttons come from what the
+// linked exporters carry, and its filters decide what gets through.
+public class DistributorBlockEntity extends SyncableBlockEntity implements MenuProvider, ConfigurableRouterBlockEntity, ImporterHost, NamedRouter {
 
     private final ImporterCore importerCore = new ImporterCore(this);
+
+    // Upgrades a Distributor saved before it stopped taking any. They aren't usable, just handed back when it's broken.
+    private final SyncableItemHandler legacyUpgrades = new SyncableItemHandler(this, 9, (i, stack) -> false, i -> false);
+
+    private String routerName = "";
 
     private final Map<TransferModule<?>, Object> distributors = new HashMap<>();
 
@@ -43,23 +61,53 @@ public class DistributorBlockEntity extends ExporterBlockEntity implements Impor
     }
 
     @Override
-    public boolean acceptsUpgrade(ItemStack stack) {
-        return stack.is(RoutersTags.Items.DISTRIBUTOR_UPGRADES);
-    }
-
-    @Override
     public ImporterCore getImporterCore() {
         return importerCore;
     }
 
     @Override
-    public void tick() {
+    public FilterItemHandler getFilterItemHandler() {
+        return importerCore.getFilterItemHandler();
     }
 
+    @Override
+    public FilterItemHandler getResourceFilter(Identifier resource) {
+        return importerCore.getResourceFilter(resource);
+    }
+
+    @Override
+    public boolean hasResourceFilter() {
+        return importerCore.hasResourceFilter();
+    }
+
+    @Override
+    public FilterFluidHandler getFilterFluidHandler() {
+        return importerCore.getFilterFluidHandler();
+    }
+
+    // Which filter buttons are available: whatever the linked exporters carry.
+    @Override
+    public boolean hasUpgrade(ButtonType type) {
+        return importerCore.hasUpgrade(type);
+    }
+
+    @Override
+    public String getRouterName() {
+        return routerName;
+    }
+
+    @Override
+    public void setRouterName(String name) {
+        this.routerName = NamedRouter.clean(name);
+        setChanged();
+        sync();
+    }
+
+    // What an exporter pushes into for this resource. The exporter's own upgrade decides whether it sends the resource at
+    // all, so there's nothing to check here.
     @Nullable
     @SuppressWarnings("unchecked")
     public <H> H getDistributor(TransferModule<H> module) {
-        if (!hasCorrectUpgrade(module.upgradeTag())) return null;
         return (H) distributors.computeIfAbsent(module, key -> module.createDistributor(this));
     }
 
@@ -72,11 +120,13 @@ public class DistributorBlockEntity extends ExporterBlockEntity implements Impor
         return targets;
     }
 
+    private record Candidate(BlockPos pos, Map<BlockCapability<?, Direction>, Direction> faces) {}
+
     private void refreshTargets(ServerLevel serverLevel) {
         int range = StartupConfig.distributorRange.get();
         BlockPos origin = worldPosition;
 
-        List<BlockPos> found = new ArrayList<>();
+        List<Candidate> found = new ArrayList<>();
 
         for (int chunkX = (origin.getX() - range) >> 4; chunkX <= (origin.getX() + range) >> 4; chunkX++) {
             for (int chunkZ = (origin.getZ() - range) >> 4; chunkZ <= (origin.getZ() + range) >> 4; chunkZ++) {
@@ -91,13 +141,13 @@ public class DistributorBlockEntity extends ExporterBlockEntity implements Impor
                             || Math.abs(pos.getZ() - origin.getZ()) > range) continue;
                     if (blockEntity.getBlockState().getBlock() instanceof RouterBlock) continue;
 
-                    Direction side = sideToward(pos, origin);
-                    if (exposesAnything(serverLevel, pos, side)) found.add(pos.immutable());
+                    Map<BlockCapability<?, Direction>, Direction> faces = probe(serverLevel, pos, sideToward(pos, origin));
+                    if (!faces.isEmpty()) found.add(new Candidate(pos.immutable(), faces));
                 }
             }
         }
 
-        found.sort(Comparator.<BlockPos>comparingDouble(pos -> pos.distSqr(origin)).thenComparingLong(BlockPos::asLong));
+        found.sort(Comparator.<Candidate>comparingDouble(candidate -> candidate.pos().distSqr(origin)).thenComparingLong(candidate -> candidate.pos().asLong()));
         int max = StartupConfig.distributorMaxTargets.get();
         if (found.size() > max) found = new ArrayList<>(found.subList(0, max));
 
@@ -105,25 +155,47 @@ public class DistributorBlockEntity extends ExporterBlockEntity implements Impor
         for (Target target : targets) previous.put(target.pos, target);
 
         List<Target> refreshed = new ArrayList<>(found.size());
-        for (BlockPos pos : found) {
-            Target existing = previous.get(pos);
-            refreshed.add(existing != null ? existing : new Target(pos, sideToward(pos, origin)));
+        for (Candidate candidate : found) {
+            Target existing = previous.get(candidate.pos());
+            boolean unchanged = existing != null && existing.faces.equals(candidate.faces());
+            refreshed.add(unchanged ? existing : new Target(candidate.pos(), sideToward(candidate.pos(), origin), candidate.faces()));
         }
         targets = refreshed;
     }
 
-    private static boolean exposesAnything(ServerLevel level, BlockPos pos, Direction side) {
+    // For every resource, the face to reach this machine on: the one pointing at the distributor if it works, then the
+    // unsided one, then whichever other face does. Some machines only expose a resource on one face (a jar's top, say).
+    private static Map<BlockCapability<?, Direction>, Direction> probe(ServerLevel level, BlockPos pos, Direction toward) {
+        Map<BlockCapability<?, Direction>, Direction> faces = new HashMap<>();
         for (TransferModule<?> module : RoutersTransfers.TRANSFER_MODULES_REGISTRY) {
-            if (exposes(level, module, pos, side)) return true;
+            probe(level, module, pos, toward, faces);
         }
-        return false;
+        return faces;
     }
 
-    private static <H> boolean exposes(ServerLevel level, TransferModule<H> module, BlockPos pos, Direction side) {
-        return level.getCapability(module.capability(), pos, side) != null
-                || level.getCapability(module.capability(), pos, null) != null;
+    private static <H> void probe(ServerLevel level, TransferModule<H> module, BlockPos pos, Direction toward, Map<BlockCapability<?, Direction>, Direction> faces) {
+        BlockCapability<H, Direction> capability = module.capability();
+
+        if (usable(level, module, pos, toward, toward)) {
+            faces.put(capability, toward);
+        } else if (usable(level, module, pos, null, toward)) {
+            faces.put(capability, null);
+        } else {
+            for (Direction face : Direction.values()) {
+                if (face != toward && usable(level, module, pos, face, face)) {
+                    faces.put(capability, face);
+                    return;
+                }
+            }
+        }
     }
 
+    private static <H> boolean usable(ServerLevel level, TransferModule<H> module, BlockPos pos, @Nullable Direction context, Direction face) {
+        H handler = level.getCapability(module.capability(), pos, context);
+        return handler != null && module.acceptsInput(handler, face);
+    }
+
+    // the face of the machine that points at the distributor
     private static Direction sideToward(BlockPos machine, BlockPos distributor) {
         int dx = distributor.getX() - machine.getX();
         int dy = distributor.getY() - machine.getY();
@@ -138,65 +210,78 @@ public class DistributorBlockEntity extends ExporterBlockEntity implements Impor
         return dz > 0 ? Direction.SOUTH : Direction.NORTH;
     }
 
+    // One machine in range, with its capabilities looked up once and then kept up to date by the cache.
     public static final class Target {
         private final BlockPos pos;
         private final Direction side;
-        private final Map<BlockCapability<?, Direction>, Lookup<?>> lookups = new HashMap<>();
+        // a null face means the unsided capability
+        private final Map<BlockCapability<?, Direction>, Direction> faces;
+        private final Map<BlockCapability<?, Direction>, BlockCapabilityCache<?, Direction>> caches = new HashMap<>();
 
-        private Target(BlockPos pos, Direction side) {
+        private Target(BlockPos pos, Direction side, Map<BlockCapability<?, Direction>, Direction> faces) {
             this.pos = pos;
             this.side = side;
+            this.faces = faces;
+        }
+
+        // The face of the machine this resource is reached on, for capabilities whose calls take one.
+        public Direction side(BlockCapability<?, Direction> capability) {
+            Direction face = faces.get(capability);
+            return face != null ? face : side;
         }
 
         @Nullable
         @SuppressWarnings("unchecked")
         public <H> H get(BlockCapability<H, Direction> capability, ServerLevel level) {
-            Lookup<H> lookup = (Lookup<H>) lookups.computeIfAbsent(capability, key -> new Lookup<>(capability));
-            return lookup.get(level, pos, side);
+            if (!faces.containsKey(capability)) return null;
+
+            BlockCapabilityCache<H, Direction> cache = (BlockCapabilityCache<H, Direction>) caches.computeIfAbsent(
+                    capability, key -> BlockCapabilityCache.create(capability, level, pos, faces.get(capability)));
+            return cache.getCapability();
         }
-    }
-
-    // Looks for the capability on the face towards the distributor first, then on the unsided one.
-    private static final class Lookup<T> {
-        private final BlockCapability<T, Direction> capability;
-        private BlockCapabilityCache<T, Direction> sided;
-        private BlockCapabilityCache<T, Direction> unsided;
-
-        private Lookup(BlockCapability<T, Direction> capability) {
-            this.capability = capability;
-        }
-
-        @Nullable
-        private T get(ServerLevel level, BlockPos pos, Direction side) {
-            if (sided == null) sided = BlockCapabilityCache.create(capability, level, pos, side);
-            T found = sided.getCapability();
-            if (found != null) return found;
-
-            if (unsided == null) unsided = BlockCapabilityCache.create(capability, level, pos, null);
-            return unsided.getCapability();
-        }
-    }
-
-    @Override
-    protected void saveAdditional(@NotNull ValueOutput output) {
-        super.saveAdditional(output);
-        importerCore.save(output.child("linkedExporters"));
-    }
-
-    @Override
-    protected void loadAdditional(@NotNull ValueInput input) {
-        super.loadAdditional(input);
-        importerCore.load(input.childOrEmpty("linkedExporters"));
-    }
-
-    @Override
-    public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state) {
-        super.preRemoveSideEffects(pos, state);
-        importerCore.unlinkFromExporters(pos);
     }
 
     @Override
     public @NotNull Component getDisplayName() {
         return Component.translatable("block.routers.distributor");
+    }
+
+    @Override
+    public AbstractContainerMenu createMenu(int container, @NotNull Inventory inventory, @NotNull Player player) {
+        return new DistributorMenu(container, inventory, getBlockPos());
+    }
+
+    @Override
+    protected void saveAdditional(@NotNull ValueOutput output) {
+        importerCore.save(output.child("linkedExporters"));
+        if (!routerName.isEmpty()) output.putString("routerName", routerName);
+
+        for (int i = 0; i < legacyUpgrades.size(); i++) {
+            if (!legacyUpgrades.getResource(i).isEmpty()) {
+                legacyUpgrades.serialize(output.child("upgradeItems"));
+                break;
+            }
+        }
+
+        super.saveAdditional(output);
+    }
+
+    @Override
+    protected void loadAdditional(@NotNull ValueInput input) {
+        importerCore.load(input.childOrEmpty("linkedExporters"));
+        routerName = NamedRouter.clean(input.getStringOr("routerName", ""));
+
+        legacyUpgrades.deserialize(input.childOrEmpty("upgradeItems"));
+
+        // filters a Distributor saved when it was built like an Exporter
+        input.child("itemFilter").ifPresent(filter -> importerCore.getFilterItemHandler().deserialize(filter));
+        input.child("fluidFilter").ifPresent(filter -> importerCore.getFilterFluidHandler().deserialize(filter));
+
+        super.loadAdditional(input);
+    }
+
+    public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state) {
+        dropInventoryContents(legacyUpgrades);
+        importerCore.unlinkFromExporters(pos);
     }
 }

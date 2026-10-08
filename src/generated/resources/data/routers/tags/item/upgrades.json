@@ -1,7 +1,6 @@
 {
   "values": [
     "#routers:upgrades/exporter",
-    "#routers:upgrades/importer",
-    "#routers:upgrades/distributor"
+    "#routers:upgrades/importer"
   ]
 }

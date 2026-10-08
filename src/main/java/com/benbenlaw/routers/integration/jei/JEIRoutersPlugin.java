@@ -8,9 +8,12 @@ import com.benbenlaw.routers.screen.upgrade.FilterScreen;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IIngredientAliasRegistration;
+import com.benbenlaw.routers.integration.thaumaturge.ThaumaturgeJei;
 import net.minecraft.resources.Identifier;
+import net.neoforged.fml.ModList;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
@@ -27,7 +30,16 @@ public class JEIRoutersPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        registration.addGhostIngredientHandler(FilterScreen.class, new GhostFilter());
+        boolean thaumaturge = ModList.get().isLoaded("thaumaturge");
+
+        registration.addGhostIngredientHandler(FilterScreen.class, new GhostFilter<FilterScreen>() {
+            @Override
+            public <I> List<Target<I>> getTargetsTyped(FilterScreen gui, ITypedIngredient<I> ingredient, boolean doStart) {
+                List<Target<I>> targets = super.getTargetsTyped(gui, ingredient, doStart);
+                if (thaumaturge) targets.addAll(ThaumaturgeJei.targets(gui, ingredient));
+                return targets;
+            }
+        });
     }
 
     @Override

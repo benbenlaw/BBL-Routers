@@ -162,7 +162,7 @@ public class RouterManagerScreen extends AbstractContainerScreen<RouterManagerMe
             Node node = nodes.get(i);
             switch (node.kind()) {
                 case EXPORTER -> { if (!linksOut[i]) addIssue(found, i, "gui.routers.manager.issue.no_importer"); }
-                case IMPORTER -> { if (!linksIn[i]) addIssue(found, i, "gui.routers.manager.issue.no_exporter"); }
+                case IMPORTER, DISTRIBUTOR -> { if (!linksIn[i]) addIssue(found, i, "gui.routers.manager.issue.no_exporter"); }
                 case IMPORTER_EXPORTER -> { if (!linksOut[i] && !linksIn[i]) addIssue(found, i, "gui.routers.manager.issue.no_links"); }
                 default -> {}
             }
@@ -639,7 +639,7 @@ public class RouterManagerScreen extends AbstractContainerScreen<RouterManagerMe
                 lines.add(Component.translatable("gui.routers.manager.importer_side", describeFlags(node.importerTypes(), node.importerFlags())).withStyle(ChatFormatting.BLUE));
             }
             if (node.kind() == Kind.DISTRIBUTOR) {
-                lines.add(Component.translatable("gui.routers.manager.distributor_side", describeFlags(node.exporterTypes(), node.exporterFlags())).withStyle(ChatFormatting.DARK_AQUA));
+                lines.add(Component.translatable("gui.routers.manager.distributor_side", describeFlags(node.importerTypes(), node.importerFlags())).withStyle(ChatFormatting.DARK_AQUA));
             }
             if (!node.working()) {
                 lines.add(Component.translatable("gui.routers.manager.disabled").withStyle(ChatFormatting.DARK_RED));

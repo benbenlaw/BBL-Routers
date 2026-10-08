@@ -1,22 +1,23 @@
 package com.benbenlaw.routers.screen.util.button;
 
+import com.benbenlaw.routers.Routers;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.resources.Identifier;
 
 import java.util.List;
 
-// A small name tag beside the title, with no frame: click it to name the router.
+// A small icon beside the title, with no frame: click it to name the router.
 public class RenameButton extends Button {
 
-    public static final int SIZE = 9;
+    public static final int SIZE = 10;
 
-    private final ItemStack icon = new ItemStack(Items.NAME_TAG);
+    private static final Identifier ICON = Routers.identifier("rename_icon");
 
     public RenameButton(int x, int y, Runnable onRename) {
         super(x, y, SIZE, SIZE, Component.empty(), button -> onRename.run(), DEFAULT_NARRATION);
@@ -28,12 +29,7 @@ public class RenameButton extends Button {
 
         if (hovered) guiGraphics.fill(getX() - 1, getY() - 1, getX() + SIZE + 1, getY() + SIZE + 1, 0x40FFFFFF);
 
-        // the item is 16 wide, so it's drawn at half size
-        guiGraphics.pose().pushMatrix();
-        guiGraphics.pose().translate(getX() + 0.5F, getY() + 0.5F);
-        guiGraphics.pose().scale(0.5F, 0.5F);
-        guiGraphics.item(icon, 0, 0);
-        guiGraphics.pose().popMatrix();
+        guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, ICON, getX(), getY(), SIZE, SIZE);
 
         if (hovered) {
             Component text = Component.translatable("tooltip.routers.rename");

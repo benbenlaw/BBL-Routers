@@ -1,21 +1,31 @@
 package com.benbenlaw.routers.api.transfers;
 
 import com.benbenlaw.routers.api.ImporterPullEngine;
+import com.benbenlaw.routers.api.RouteFilters;
 import com.benbenlaw.routers.api.TransferEngine;
 import com.benbenlaw.routers.api.TransferModule;
+import com.benbenlaw.routers.block.custom.RouterBlock;
 import com.benbenlaw.routers.block.entity.DistributorBlockEntity;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.block.entity.ImporterCore;
 import com.benbenlaw.routers.util.ResourceScanState;
+import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class SimpleCapabilityTransfer<H> implements TransferModule<H> {
 
-    protected abstract boolean isEmpty(H source);
+    protected abstract boolean isEmpty(H source, Direction side);
 
-    protected abstract boolean move(H source, H target, int amount);
+    protected abstract boolean move(H source, Direction sourceSide, H target, Direction targetSide, int amount, RouteFilters filters);
+
+    private record Resolved<H>(H handler, Direction side, boolean distributed) {}
+
+    private static Direction faceOf(BlockState routerState) {
+        return routerState.hasProperty(RouterBlock.FACING) ? routerState.getValue(RouterBlock.FACING).getOpposite() : Direction.UP;
+    }
 
     @Override
     public int push(ServerLevel level, ExporterBlockEntity exporter) {
@@ -23,18 +33,23 @@ public abstract class SimpleCapabilityTransfer<H> implements TransferModule<H> {
         if (scan.shouldSkip(level.getGameTime())) return exporter.lastImporterIndex;
 
         int amount = exporter.getUpgradeValue(upgradeTag());
+        Direction sourceSide = faceOf(exporter.getBlockState());
         H source = exporter.getConnectedResources().get(capability());
-        if (source == null || isEmpty(source)) return exporter.lastImporterIndex;
+        if (source == null || isEmpty(source, sourceSide)) return exporter.lastImporterIndex;
 
         boolean[] moved = {false};
         scan.nextScanStart(1);
 
         int result = TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin, exporter.lastImporterIndex,
                 (srvLevel, entity, targetPos) -> {
-                    H target = getTargetHandler(srvLevel, entity, targetPos);
+                    Resolved<H> target = getTarget(srvLevel, entity, targetPos);
                     if (target == null) return false;
 
-                    if (move(source, target, amount)) {
+                    // a distributor applies its own filters as it shares things out
+                    ImporterCore importer = target.distributed() ? null : ImporterCore.at(srvLevel, targetPos.pos());
+                    RouteFilters filters = new RouteFilters(entity, entity.isBlacklist(), importer, importer != null && importer.isBlacklist());
+
+                    if (move(source, sourceSide, target.handler(), target.side(), amount, filters)) {
                         moved[0] = true;
                         return true;
                     }
@@ -50,6 +65,7 @@ public abstract class SimpleCapabilityTransfer<H> implements TransferModule<H> {
         ResourceScanState scan = importer.getScanState(capability().name());
         if (scan.shouldSkip(level.getGameTime())) return importer.lastExporterIndex;
 
+        Direction targetSide = faceOf(importer.getHost().getBlockState());
         H target = importer.getConnectedResources().get(capability());
         if (target == null) return importer.lastExporterIndex;
 
@@ -61,10 +77,12 @@ public abstract class SimpleCapabilityTransfer<H> implements TransferModule<H> {
                     ExporterBlockEntity exporter = getExporterAt(srvLevel, exporterPos);
                     if (exporter == null || !exporter.hasCorrectUpgrade(upgradeTag())) return false;
 
-                    H source = getSourceHandler(srvLevel, exporter, imp, exporterPos);
-                    if (source == null || isEmpty(source)) return false;
+                    Resolved<H> source = getSource(srvLevel, exporter, imp, exporterPos);
+                    if (source == null || isEmpty(source.handler(), source.side())) return false;
 
-                    if (move(source, target, exporter.getUpgradeValue(upgradeTag()))) {
+                    RouteFilters filters = new RouteFilters(exporter, exporter.isBlacklist(), imp, imp.isBlacklist());
+
+                    if (move(source.handler(), source.side(), target, targetSide, exporter.getUpgradeValue(upgradeTag()), filters)) {
                         moved[0] = true;
                         return true;
                     }
@@ -76,18 +94,20 @@ public abstract class SimpleCapabilityTransfer<H> implements TransferModule<H> {
     }
 
     @Nullable
-    private H getTargetHandler(ServerLevel level, ExporterBlockEntity exporter, GlobalPos pos) {
+    private Resolved<H> getTarget(ServerLevel level, ExporterBlockEntity exporter, GlobalPos pos) {
         ServerLevel targetLevel = level.getServer().getLevel(pos.dimension());
         if (targetLevel == null || (!pos.dimension().equals(level.dimension()) && !exporter.canDoDimensionalTravel())) return null;
         if (!targetLevel.isLoaded(pos.pos())) return null;
 
         if (targetLevel.getBlockEntity(pos.pos()) instanceof DistributorBlockEntity distributor) {
-            return distributor.getDistributor(this);
+            H handler = distributor.getDistributor(this);
+            return handler == null ? null : new Resolved<>(handler, Direction.UP, true);
         }
 
         if (ImporterCore.at(targetLevel, pos.pos()) == null) return null;
 
-        return exporter.getTargetCache(capability()).get(targetLevel, pos);
+        H handler = exporter.getTargetCache(capability()).get(targetLevel, pos);
+        return handler == null ? null : new Resolved<>(handler, faceOf(targetLevel.getBlockState(pos.pos())), false);
     }
 
     @Nullable
@@ -98,12 +118,13 @@ public abstract class SimpleCapabilityTransfer<H> implements TransferModule<H> {
     }
 
     @Nullable
-    private H getSourceHandler(ServerLevel importerLevel, ExporterBlockEntity exporter, ImporterCore importer, GlobalPos exporterPos) {
+    private Resolved<H> getSource(ServerLevel importerLevel, ExporterBlockEntity exporter, ImporterCore importer, GlobalPos exporterPos) {
         if (!exporterPos.dimension().equals(importerLevel.dimension()) && !exporter.canDoDimensionalTravel()) return null;
 
         ServerLevel exporterLevel = importerLevel.getServer().getLevel(exporterPos.dimension());
         if (exporterLevel == null || !exporterLevel.isLoaded(exporterPos.pos())) return null;
 
-        return importer.getSourceCache(capability()).get(exporterLevel, exporterPos);
+        H handler = importer.getSourceCache(capability()).get(exporterLevel, exporterPos);
+        return handler == null ? null : new Resolved<>(handler, faceOf(exporterLevel.getBlockState(exporterPos.pos())), false);
     }
 }

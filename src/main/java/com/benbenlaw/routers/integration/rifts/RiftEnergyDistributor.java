@@ -4,7 +4,6 @@ import com.benbenlaw.rifts.block.capability.RiftEnergyHandler;
 import com.benbenlaw.rifts.block.capability.RiftsCapabilities;
 import com.benbenlaw.routers.api.transfers.DistributorHandlers;
 import com.benbenlaw.routers.block.entity.DistributorBlockEntity;
-import com.benbenlaw.routers.util.RoutersTags;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 
@@ -25,16 +24,13 @@ public class RiftEnergyDistributor implements RiftEnergyHandler {
         if (amount <= 0) return 0;
         if (!(distributor.getLevel() instanceof ServerLevel level)) return 0;
 
-        int cap = distributor.getUpgradeValue(RoutersTags.Items.RIFT_ENERGY_UPGRADES);
-        if (cap <= 0) return 0;
-
         List<RiftEnergyHandler> handlers = new ArrayList<>();
         for (DistributorBlockEntity.Target target : distributor.getTargets(level)) {
             RiftEnergyHandler handler = target.get(RiftsCapabilities.RIFT_ENERGY, level);
             if (handler != null && handler.canInsert()) handlers.add(handler);
         }
 
-        return spreader.spread(Math.min(amount, cap), handlers.size(), distributor.isRoundRobin,
+        return spreader.spread(amount, handlers.size(), false,
                 (index, share) -> handlers.get(index).insert(share, transaction));
     }
 

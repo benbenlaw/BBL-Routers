@@ -66,8 +66,8 @@ public class RoutersGameTests {
     public static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> DISTRIBUTOR_SPREADS_ITEMS =
             TEST_FUNCTIONS.register("distributor_spreads_items", () -> RoutersGameTests::distributorSpreadsFilteredItemsToNearbyMachines);
 
-    public static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> DISTRIBUTOR_NEEDS_UPGRADE =
-            TEST_FUNCTIONS.register("distributor_needs_upgrade", () -> RoutersGameTests::distributorWithoutUpgradeDistributesNothing);
+    public static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> DISTRIBUTOR_FILTER_BUTTONS =
+            TEST_FUNCTIONS.register("distributor_filter_buttons", () -> RoutersGameTests::distributorFilterButtonsFollowLinkedExporters);
 
     public static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> ENERGY_TRANSFER =
             TEST_FUNCTIONS.register("energy_transfer", () -> RoutersGameTests::energyMovesBetweenEnergyBlocks);
@@ -80,6 +80,9 @@ public class RoutersGameTests {
 
     public static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> MANAGER_SCAN_CACHE =
             TEST_FUNCTIONS.register("manager_scan_cache", () -> RoutersGameTests::managerReusesRecentScans);
+
+    public static final DeferredHolder<Consumer<GameTestHelper>, Consumer<GameTestHelper>> RESOURCE_FILTER_SAVES =
+            TEST_FUNCTIONS.register("resource_filter_saves", () -> RoutersGameTests::resourceFiltersSurviveSaving);
 
     public static void registerTests(RegisterGameTestsEvent event) {
         Holder<TestEnvironmentDefinition<?>> environment = event.registerEnvironment(Routers.identifier("default"));
@@ -127,8 +130,8 @@ public class RoutersGameTests {
         event.registerTest(Routers.identifier("distributor_spreads_items"),
                 new FunctionGameTestInstance(DISTRIBUTOR_SPREADS_ITEMS.getKey(), longTestData));
 
-        event.registerTest(Routers.identifier("distributor_needs_upgrade"),
-                new FunctionGameTestInstance(DISTRIBUTOR_NEEDS_UPGRADE.getKey(), longTestData));
+        event.registerTest(Routers.identifier("distributor_filter_buttons"),
+                new FunctionGameTestInstance(DISTRIBUTOR_FILTER_BUTTONS.getKey(), longTestData));
 
         event.registerTest(Routers.identifier("energy_transfer"),
                 new FunctionGameTestInstance(ENERGY_TRANSFER.getKey(), longTestData));
@@ -141,6 +144,9 @@ public class RoutersGameTests {
 
         event.registerTest(Routers.identifier("manager_scan_cache"),
                 new FunctionGameTestInstance(MANAGER_SCAN_CACHE.getKey(), testData));
+
+        event.registerTest(Routers.identifier("resource_filter_saves"),
+                new FunctionGameTestInstance(RESOURCE_FILTER_SAVES.getKey(), testData));
 
         event.registerTest(Routers.identifier("router_manager_shared_inventory"),
                 new FunctionGameTestInstance(ROUTER_MANAGER_SHARED_INVENTORY.getKey(), testData));
@@ -365,7 +371,6 @@ public class RoutersGameTests {
         exporter.toggleImporterPosition(GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(distributorPos)));
 
         DistributorBlockEntity distributor = helper.getBlockEntity(distributorPos, DistributorBlockEntity.class);
-        distributor.getUpgradeItemHandler().set(0, ItemResource.of(RoutersItems.ITEM_UPGRADE_1.get()), 1);
         distributor.getFilterItemHandler().set(0, ItemResource.of(Items.DIAMOND), 1);
 
         helper.startSequence()
@@ -381,32 +386,35 @@ public class RoutersGameTests {
                 .thenSucceed();
     }
 
-    // The Distributor only accepts a resource type it has an upgrade for, so with none installed nothing is passed on.
-    private static void distributorWithoutUpgradeDistributesNothing(GameTestHelper helper) {
-        int originalRange = StartupConfig.distributorRange.get();
-        StartupConfig.distributorRange.set(3);
-        helper.runBeforeTestEnd(() -> StartupConfig.distributorRange.set(originalRange));
-
+    // A Distributor has no upgrades, so its filter buttons are unlocked by the exporters linked to it, like an Importer's.
+    private static void distributorFilterButtonsFollowLinkedExporters(GameTestHelper helper) {
         BlockPos exporterPos = new BlockPos(1, 1, 1);
-        BlockPos sourceChestPos = new BlockPos(1, 1, 2);
         BlockPos distributorPos = new BlockPos(5, 1, 1);
-        BlockPos chestPos = new BlockPos(7, 1, 1);
 
         helper.setBlock(exporterPos, RoutersBlocks.EXPORTER.get(), Direction.SOUTH);
-        helper.setBlock(sourceChestPos, Blocks.CHEST);
         helper.setBlock(distributorPos, RoutersBlocks.DISTRIBUTOR.get(), Direction.SOUTH);
-        helper.setBlock(chestPos, Blocks.CHEST);
-
-        helper.getBlockEntity(sourceChestPos, ChestBlockEntity.class).setItem(0, new ItemStack(Items.DIAMOND, 16));
 
         ExporterBlockEntity exporter = helper.getBlockEntity(exporterPos, ExporterBlockEntity.class);
-        exporter.getUpgradeItemHandler().set(0, ItemResource.of(RoutersItems.ITEM_UPGRADE_1.get()), 1);
-        exporter.toggleImporterPosition(GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(distributorPos)));
+        DistributorBlockEntity distributor = helper.getBlockEntity(distributorPos, DistributorBlockEntity.class);
+        GlobalPos distributorGlobal = GlobalPos.of(helper.getLevel().dimension(), helper.absolutePos(distributorPos));
+
+        var item = com.benbenlaw.routers.api.RouterButtonTypes.get(com.benbenlaw.routers.api.RouterButtonTypes.ITEM);
+        var fluid = com.benbenlaw.routers.api.RouterButtonTypes.get(com.benbenlaw.routers.api.RouterButtonTypes.FLUID);
 
         helper.startSequence()
-                .thenIdle(150)
-                .thenExecute(() -> helper.assertTrue(!containerHas(helper, chestPos, Items.DIAMOND),
-                        "A Distributor with no item upgrade should not have passed anything on"))
+                .thenExecute(() -> {
+                    helper.assertTrue(!distributor.hasUpgrade(item), "Nothing is linked yet, so the item filter should be locked");
+
+                    exporter.toggleImporterPosition(distributorGlobal);
+                    helper.assertTrue(!distributor.hasUpgrade(item), "The linked exporter has no item upgrade yet");
+
+                    exporter.getUpgradeItemHandler().set(0, ItemResource.of(RoutersItems.ITEM_UPGRADE_1.get()), 1);
+                    helper.assertTrue(distributor.hasUpgrade(item), "The exporter's item upgrade should unlock the item filter");
+                    helper.assertTrue(!distributor.hasUpgrade(fluid), "The fluid filter should stay locked");
+
+                    exporter.toggleImporterPosition(distributorGlobal);
+                    helper.assertTrue(!distributor.hasUpgrade(item), "Unlinking should lock the item filter again");
+                })
                 .thenSucceed();
     }
 
@@ -562,6 +570,47 @@ public class RoutersGameTests {
                     helper.assertTrue(fresh != first, "A fresh scan should replace the cached one");
                     helper.assertTrue(fresh.nodes().stream().anyMatch(node -> node.name().equals("Fresh")), "The fresh scan should show the new name");
                     helper.assertTrue(ManagerScanner.scanCached(level, manager) == fresh, "Reads after that should reuse the fresh scan");
+                })
+                .thenSucceed();
+    }
+
+    // The filter slots kept for resources other than items and fluids come back after the router is saved and loaded, on
+    // an exporter, an importer and a distributor.
+    private static void resourceFiltersSurviveSaving(GameTestHelper helper) {
+        BlockPos exporterPos = new BlockPos(1, 1, 1);
+        BlockPos importerPos = new BlockPos(3, 1, 1);
+        BlockPos distributorPos = new BlockPos(5, 1, 1);
+
+        helper.setBlock(exporterPos, RoutersBlocks.EXPORTER.get(), Direction.SOUTH);
+        helper.setBlock(importerPos, RoutersBlocks.IMPORTER.get(), Direction.SOUTH);
+        helper.setBlock(distributorPos, RoutersBlocks.DISTRIBUTOR.get(), Direction.SOUTH);
+
+        var energy = com.benbenlaw.routers.api.RouterButtonTypes.ENERGY;
+        var registries = helper.getLevel().registryAccess();
+
+        com.benbenlaw.routers.api.ConfigurableRouterBlockEntity[] routers = {
+                helper.getBlockEntity(exporterPos, ExporterBlockEntity.class),
+                helper.getBlockEntity(importerPos, com.benbenlaw.routers.block.entity.ImporterBlockEntity.class),
+                helper.getBlockEntity(distributorPos, DistributorBlockEntity.class)
+        };
+        BlockPos[] positions = {exporterPos, importerPos, distributorPos};
+
+        helper.startSequence()
+                .thenExecute(() -> {
+                    for (int i = 0; i < routers.length; i++) {
+                        helper.assertTrue(!routers[i].hasResourceFilter(), "A new router should have no resource filters");
+                        routers[i].getResourceFilter(energy).set(2, ItemResource.of(Items.DIAMOND), 1);
+                        helper.assertTrue(routers[i].hasResourceFilter(), "A router with a resource filter set should say so");
+
+                        net.minecraft.world.level.block.entity.BlockEntity original = (net.minecraft.world.level.block.entity.BlockEntity) routers[i];
+                        net.minecraft.nbt.CompoundTag saved = original.saveWithFullMetadata(registries);
+                        net.minecraft.world.level.block.entity.BlockEntity copy = net.minecraft.world.level.block.entity.BlockEntity.loadStatic(
+                                helper.absolutePos(positions[i]), original.getBlockState(), saved, registries);
+
+                        var loaded = (com.benbenlaw.routers.api.ConfigurableRouterBlockEntity) copy;
+                        helper.assertTrue(loaded.getResourceFilter(energy).getResource(2).getItem() == Items.DIAMOND,
+                                "The resource filter slot should come back after saving and loading: " + original.getClass().getSimpleName());
+                    }
                 })
                 .thenSucceed();
     }

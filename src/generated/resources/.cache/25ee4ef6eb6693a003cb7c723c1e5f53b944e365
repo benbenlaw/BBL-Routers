@@ -1,9 +1,14 @@
-// 26.1.2	2026-10-04T12:28:44.5363884	routers Models
+// 26.1.2	2026-10-08T08:54:00.6125649	routers Models
 50f3ba349d012414e4c856fc66a3af6ce3a6602b assets/routers/blockstates/router_manager.json
 ee065ab5ed5fc664a1446b46951a00bf7dd02c2e assets/routers/items/blacklist_upgrade.json
 35a6161747fc1c128b75e733150e33636d5c6462 assets/routers/items/connector.json
 b293a4958f39b37bb63be274d6d69042b114ce23 assets/routers/items/dimensional_upgrade.json
 1a11ea5ffafd099a30b3e62f6869f5293a9c303b assets/routers/items/distributor.json
+1618f7025790b3872aff7b2708209bcefb769754 assets/routers/items/essentia_upgrade_1.json
+2efdab8567010412271edaa15ca5451ef6795ca0 assets/routers/items/essentia_upgrade_2.json
+f4adc0819bd01dd4cf11c10c3c147db9eb3d990c assets/routers/items/essentia_upgrade_3.json
+0063e79ac4036b8b16ada8f36739a4d1f9f7f8d5 assets/routers/items/essentia_upgrade_4.json
+8941ea10ea650cf1629e74b005245c85bf6cec9b assets/routers/items/essentia_upgrade_5.json
 467009318fc06b6b48b01dca7b91a45922f41d76 assets/routers/items/exporter.json
 61529bd928d358737ec7d6cc952989fa2ca35d75 assets/routers/items/fluid_upgrade_1.json
 ac31fea18987031f1065a20b49135508abb96e71 assets/routers/items/fluid_upgrade_2.json
@@ -42,6 +47,11 @@ cfb54e06942e117cf654c273a6cc9ccd33acffe0 assets/routers/models/block/router_mana
 9651468d973afaaafc6cb72620e37e2c307b2a93 assets/routers/models/item/blacklist_upgrade.json
 cd2f853ccb50ecbbeacd12e5e0da10c461cd1456 assets/routers/models/item/connector.json
 a782b05c60fae59f41493467fa9073adc10e96dc assets/routers/models/item/dimensional_upgrade.json
+969c57318262704eedd44246dbd627ee27ce7284 assets/routers/models/item/essentia_upgrade_1.json
+ec984a566490e298c58c46d122db422e1482a6c9 assets/routers/models/item/essentia_upgrade_2.json
+034f7a41998be80128e8c50b81687e1f2b50a823 assets/routers/models/item/essentia_upgrade_3.json
+c8f78356907fc7105781298512a691420be7a5ca assets/routers/models/item/essentia_upgrade_4.json
+e3ae501964fac18db25062a6386b0c30e725c434 assets/routers/models/item/essentia_upgrade_5.json
 286b4618113f644f264c3988be7c1b930fa9897d assets/routers/models/item/fluid_upgrade_1.json
 d4f9882149a9d3e0c3640305d0d5ca5f48116ef4 assets/routers/models/item/fluid_upgrade_2.json
 7510af723739a454bd6a5d789471ae3cca4886b8 assets/routers/models/item/fluid_upgrade_3.json

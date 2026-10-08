@@ -4,6 +4,7 @@ import com.benbenlaw.core.block.entity.handler.fluid.FilterFluidHandler;
 import com.benbenlaw.core.block.entity.handler.item.FilterItemHandler;
 import com.benbenlaw.routers.block.entity.ImporterExporterBlockEntity;
 import com.benbenlaw.routers.screen.util.button.ButtonType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,6 +12,11 @@ public interface ConfigurableRouterBlockEntity {
     FilterItemHandler getFilterItemHandler();
     FilterFluidHandler getFilterFluidHandler();
     boolean hasUpgrade(ButtonType type);
+
+    // The filter slots for a resource other than items and fluids, which have their own handlers.
+    FilterItemHandler getResourceFilter(Identifier resource);
+
+    boolean hasResourceFilter();
 
     @Nullable
     static ConfigurableRouterBlockEntity resolve(@Nullable BlockEntity blockEntity) {

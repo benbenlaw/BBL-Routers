@@ -8,6 +8,7 @@ import com.benbenlaw.routers.block.entity.renderer.ExporterBlockEntityRenderer;
 import com.benbenlaw.routers.config.StartupConfig;
 import com.benbenlaw.routers.gametest.RoutersGameTests;
 import com.benbenlaw.routers.integration.rifts.RiftsIntegration;
+import com.benbenlaw.routers.integration.thaumaturge.ThaumaturgeIntegration;
 import com.benbenlaw.routers.item.RoutersCreativeTab;
 import com.benbenlaw.routers.item.RoutersDataComponents;
 import com.benbenlaw.routers.item.RoutersItems;
@@ -59,6 +60,10 @@ public class Routers {
             RiftsIntegration.register(eventBus);
         }
 
+        if (ModList.get().isLoaded("thaumaturge")) {
+            ThaumaturgeIntegration.register(eventBus);
+        }
+
         if (Dist.CLIENT.isClient()) {
             eventBus.addListener(this::onClientSetup);
         }
@@ -86,6 +91,7 @@ public class Routers {
             event.register(RoutersMenuTypes.IMPORTER_MENU.get(), ImporterScreen::new);
             event.register(RoutersMenuTypes.IMPORTER_EXPORTER_MENU.get(), ImporterExporterScreen::new);
             event.register(RoutersMenuTypes.ROUTER_MANAGER_MENU.get(), RouterManagerScreen::new);
+            event.register(RoutersMenuTypes.DISTRIBUTOR_MENU.get(), DistributorScreen::new);
             event.register(RoutersMenuTypes.FILTER_MENU.get(), FilterScreen::new);
         }
     }
@@ -95,6 +101,10 @@ public class Routers {
 
         if (ModList.get().isLoaded("rifts")) {
             event.enqueueWork(RiftsIntegration::clientInit);
+        }
+
+        if (ModList.get().isLoaded("thaumaturge")) {
+            event.enqueueWork(ThaumaturgeIntegration::clientInit);
         }
     }
 

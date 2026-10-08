@@ -1,13 +1,13 @@
-// 26.1.2	2026-10-04T12:28:44.5353867	Tags for minecraft:item mod id routers
+// 26.1.2	2026-10-08T08:54:00.6115532	Tags for minecraft:item mod id routers
 31137ea53dd8d43545ae6d423a1b012ad1935bc4 data/c/tags/item/tools/wrench.json
 c730f894e2270197fd5cb894e19c23d024d93973 data/routers/tags/item/dimensional_upgrades.json
+58688fd89b2f8bf446fcfd5cc1c8c7281098dbbf data/routers/tags/item/essentia_upgrades.json
 bedee0ac694f6bee92ec2f0a1edf008a9146e3ed data/routers/tags/item/fluid_upgrades.json
 24552ca5b7a90c08532b78633c64b988ef3be4b2 data/routers/tags/item/item_upgrades.json
 6a0f91be2ace492c4163633819ae482a6f223e69 data/routers/tags/item/rf_upgrades.json
 1a95a2f08dd761aade91fd26e9834bbf9b0a2d72 data/routers/tags/item/rift_energy_upgrades.json
 5446cf4dd821d9fe464f4ef4c168a3c8a983a0cf data/routers/tags/item/round_robin_upgrades.json
 fca4dd8cde38598d0f46eb8724f5954db8952fc1 data/routers/tags/item/speed_upgrades.json
-617a90bc87aeb27cae9acd3313c76ef5c60a0f55 data/routers/tags/item/upgrades.json
-570e510957109df43d71b7d8b2e690145aba9acc data/routers/tags/item/upgrades/distributor.json
-1c7bf2c34765b17747894a083457f932afa68dcf data/routers/tags/item/upgrades/exporter.json
+bfcbb4a3bb9cb9c0add7bc284cf465e09d0bd40f data/routers/tags/item/upgrades.json
+b77dc7b38dc6a7545583c6466bebcc9e6f42aaa2 data/routers/tags/item/upgrades/exporter.json
 a270ae296aa9804397c05414d1bb848b3d771300 data/routers/tags/item/upgrades/importer.json

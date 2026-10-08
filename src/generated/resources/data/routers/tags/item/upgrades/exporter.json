@@ -11,6 +11,10 @@
     {
       "id": "#routers:rift_energy_upgrades",
       "required": false
+    },
+    {
+      "id": "#routers:essentia_upgrades",
+      "required": false
     }
   ]
 }

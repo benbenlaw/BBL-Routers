@@ -10,6 +10,7 @@ import com.benbenlaw.routers.block.RoutersBlockEntities;
 import com.benbenlaw.routers.screen.ImporterMenu;
 import com.benbenlaw.routers.screen.util.button.ButtonType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -88,6 +89,16 @@ public class ImporterBlockEntity extends SyncableBlockEntity implements MenuProv
     @Override
     public FilterItemHandler getFilterItemHandler() {
         return core.getFilterItemHandler();
+    }
+
+    @Override
+    public FilterItemHandler getResourceFilter(Identifier resource) {
+        return core.getResourceFilter(resource);
+    }
+
+    @Override
+    public boolean hasResourceFilter() {
+        return core.hasResourceFilter();
     }
 
     @Override

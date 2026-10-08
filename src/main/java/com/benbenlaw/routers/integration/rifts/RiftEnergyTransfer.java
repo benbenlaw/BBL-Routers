@@ -2,6 +2,7 @@ package com.benbenlaw.routers.integration.rifts;
 
 import com.benbenlaw.rifts.block.capability.RiftEnergyHandler;
 import com.benbenlaw.rifts.block.capability.RiftsCapabilities;
+import com.benbenlaw.routers.api.RouteFilters;
 import com.benbenlaw.routers.api.transfers.SimpleCapabilityTransfer;
 import com.benbenlaw.routers.block.entity.DistributorBlockEntity;
 import com.benbenlaw.routers.util.RoutersTags;
@@ -24,12 +25,12 @@ public class RiftEnergyTransfer extends SimpleCapabilityTransfer<RiftEnergyHandl
     }
 
     @Override
-    protected boolean isEmpty(RiftEnergyHandler source) {
+    protected boolean isEmpty(RiftEnergyHandler source, Direction side) {
         return !source.canExtract() || source.getAmountAsLong() <= 0;
     }
 
     @Override
-    protected boolean move(RiftEnergyHandler source, RiftEnergyHandler target, int amount) {
+    protected boolean move(RiftEnergyHandler source, Direction sourceSide, RiftEnergyHandler target, Direction targetSide, int amount, RouteFilters filters) {
         if (!source.canExtract() || !target.canInsert()) return false;
 
         int available;

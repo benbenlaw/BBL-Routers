@@ -84,7 +84,6 @@ dependencies {
     //BBL Core
     implementation("curse.maven:bblcore-1135181:${core_version}")
     //Pipez
-    //runtimeOnly("curse.maven:pipez-443900:7859957")
     //Ender IO
     runtimeOnly("curse.maven:ender-io-64578:8004141")
     //AE2
@@ -103,9 +102,16 @@ dependencies {
     runtimeOnly("curse.maven:titanium-287342:8671128")
     //Infinity Drives
     runtimeOnly("curse.maven:infinity-drives-1386843:8339790")
-    //BBL Rifts (optional, only the integration package touches it)
-    compileOnly("curse.maven:bbl-rifts-1721086:9029197")
-    runtimeOnly("curse.maven:bbl-rifts-1721086:9029197")
+    //Curios
+    runtimeOnly("curse.maven:curios-309927:8463519")
+    //Lithostitched
+    runtimeOnly("curse.maven:lithostitched-936015:8944658")
+
+    //Supported Mods
+    //BBL Rifts
+    implementation("curse.maven:bbl-rifts-1721086:9029197")
+    //Thaumaturge
+    implementation("curse.maven:thaumaturge-1628024:9095192")
 }
 
 tasks.withType(ProcessResources).configureEach {

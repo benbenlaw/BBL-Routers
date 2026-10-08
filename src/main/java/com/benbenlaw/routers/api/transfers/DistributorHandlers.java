@@ -2,7 +2,6 @@ package com.benbenlaw.routers.api.transfers;
 
 import com.benbenlaw.core.block.entity.handler.item.FilterItemHandler;
 import com.benbenlaw.routers.block.entity.DistributorBlockEntity;
-import com.benbenlaw.routers.util.RoutersTags;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.transfer.ResourceHandler;
@@ -32,12 +31,9 @@ public class DistributorHandlers {
             if (resource.isEmpty() || amount <= 0) return 0;
             if (!(distributor.getLevel() instanceof ServerLevel level)) return 0;
 
-            int cap = distributor.getUpgradeValue(RoutersTags.Items.ITEM_UPGRADES);
-            if (cap <= 0) return 0;
-
             FilterItemHandler filter = distributor.getFilterItemHandler();
             if (!ResourceHandlerUtil.isEmpty(filter)
-                    && ItemTransfer.checkFilter(filter, resource, !distributor.isBlacklist(), distributor.isIgnoreNbt()) <= 0) {
+                    && ItemTransfer.checkFilter(filter, resource, true, false) <= 0) {
                 return 0;
             }
 
@@ -47,7 +43,7 @@ public class DistributorHandlers {
                 if (handler != null) handlers.add(handler);
             }
 
-            return spreader.spread(Math.min(amount, cap), handlers.size(), distributor.isRoundRobin,
+            return spreader.spread(amount, handlers.size(), false,
                     (index, share) -> handlers.get(index).insert(resource, share, transaction));
         }
 
@@ -74,11 +70,8 @@ public class DistributorHandlers {
             if (resource.isEmpty() || amount <= 0) return 0;
             if (!(distributor.getLevel() instanceof ServerLevel level)) return 0;
 
-            int cap = distributor.getUpgradeValue(RoutersTags.Items.FLUID_UPGRADES);
-            if (cap <= 0) return 0;
-
             if (!ResourceHandlerUtil.isEmpty(distributor.getFilterFluidHandler())
-                    && !distributor.getFilterFluidHandler().matchesFluid(resource, !distributor.isBlacklist(), distributor.isIgnoreNbt())) {
+                    && !distributor.getFilterFluidHandler().matchesFluid(resource, true, false)) {
                 return 0;
             }
 
@@ -88,7 +81,7 @@ public class DistributorHandlers {
                 if (handler != null) handlers.add(handler);
             }
 
-            return spreader.spread(Math.min(amount, cap), handlers.size(), distributor.isRoundRobin,
+            return spreader.spread(amount, handlers.size(), false,
                     (index, share) -> handlers.get(index).insert(resource, share, transaction));
         }
 
@@ -115,16 +108,13 @@ public class DistributorHandlers {
             if (amount <= 0) return 0;
             if (!(distributor.getLevel() instanceof ServerLevel level)) return 0;
 
-            int cap = distributor.getUpgradeValue(RoutersTags.Items.RF_UPGRADES);
-            if (cap <= 0) return 0;
-
             List<EnergyHandler> handlers = new ArrayList<>();
             for (DistributorBlockEntity.Target target : distributor.getTargets(level)) {
                 EnergyHandler handler = target.get(Capabilities.Energy.BLOCK, level);
                 if (handler != null) handlers.add(handler);
             }
 
-            return spreader.spread(Math.min(amount, cap), handlers.size(), distributor.isRoundRobin,
+            return spreader.spread(amount, handlers.size(), false,
                     (index, share) -> handlers.get(index).insert(share, transaction));
         }
 
@@ -138,6 +128,11 @@ public class DistributorHandlers {
         private int next;
 
         public int spread(int total, int count, boolean single, IntBinaryOperator insertInto) {
+            return spread(total, count, single, true, insertInto);
+        }
+
+        // rotate = false looks without moving the starting machine on, so a trial run and the real thing share out the same way
+        public int spread(int total, int count, boolean single, boolean rotate, IntBinaryOperator insertInto) {
             if (count <= 0 || total <= 0) return 0;
 
             int start = next % count;
@@ -147,7 +142,7 @@ public class DistributorHandlers {
                     int index = (start + i) % count;
                     int moved = insertInto.applyAsInt(index, total);
                     if (moved > 0) {
-                        next = index + 1;
+                        if (rotate) next = index + 1;
                         return moved;
                     }
                 }
@@ -170,7 +165,7 @@ public class DistributorHandlers {
                 remaining -= moved;
             }
 
-            next = start + 1;
+            if (rotate) next = start + 1;
             return accepted;
         }
     }

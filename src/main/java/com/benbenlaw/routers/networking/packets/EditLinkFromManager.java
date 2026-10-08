@@ -1,7 +1,6 @@
 package com.benbenlaw.routers.networking.packets;
 
 import com.benbenlaw.routers.Routers;
-import com.benbenlaw.routers.block.entity.DistributorBlockEntity;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.manager.ManagerScanner;
 import com.benbenlaw.routers.manager.ManagerSessions;
@@ -57,7 +56,6 @@ public record EditLinkFromManager(BlockPos managerPos, GlobalPos exporterPos, Gl
         ServerLevel exporterLevel = level.getServer().getLevel(exporterPos.dimension());
         if (exporterLevel == null || !exporterLevel.isLoaded(exporterPos.pos())) return false;
         if (!(exporterLevel.getBlockEntity(exporterPos.pos()) instanceof ExporterBlockEntity exporter)) return false;
-        if (exporter instanceof DistributorBlockEntity) return false;
 
         // toggleImporterPosition flips the link and updates the importer too, so only call it when it changes something
         boolean linked = exporter.importerPositions != null && exporter.importerPositions.contains(importerPos);

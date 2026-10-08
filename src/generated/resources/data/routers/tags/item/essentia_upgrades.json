@@ -1,0 +1,24 @@
+{
+  "values": [
+    {
+      "id": "routers:essentia_upgrade_1",
+      "required": false
+    },
+    {
+      "id": "routers:essentia_upgrade_2",
+      "required": false
+    },
+    {
+      "id": "routers:essentia_upgrade_3",
+      "required": false
+    },
+    {
+      "id": "routers:essentia_upgrade_4",
+      "required": false
+    },
+    {
+      "id": "routers:essentia_upgrade_5",
+      "required": false
+    }
+  ]
+}

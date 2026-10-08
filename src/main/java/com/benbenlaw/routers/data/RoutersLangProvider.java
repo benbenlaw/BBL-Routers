@@ -42,6 +42,12 @@ public class RoutersLangProvider extends LanguageProvider {
         add("item.routers.speed_upgrade_3", "Speed Upgrade III");
         add("item.routers.speed_upgrade_4", "Speed Upgrade IV");
 
+        add("item.routers.essentia_upgrade_1", "Essentia Upgrade I");
+        add("item.routers.essentia_upgrade_2", "Essentia Upgrade II");
+        add("item.routers.essentia_upgrade_3", "Essentia Upgrade III");
+        add("item.routers.essentia_upgrade_4", "Essentia Upgrade IV");
+        add("item.routers.essentia_upgrade_5", "Essentia Upgrade V");
+
         add("item.routers.rift_energy_upgrade_1", "Rift Energy Upgrade I");
         add("item.routers.rift_energy_upgrade_2", "Rift Energy Upgrade II");
         add("item.routers.rift_energy_upgrade_3", "Rift Energy Upgrade III");
@@ -128,7 +134,7 @@ public class RoutersLangProvider extends LanguageProvider {
 
         add("tooltip.routers.importer_exporter.switch_to_importer", "Switch to Importer settings");
         add("tooltip.routers.importer_exporter.switch_to_exporter", "Switch to Exporter settings");
-        add("tooltip.routers.distributor", "Link Exporters to it like an Importer. Whatever they send is shared out between every machine in range, depending on this Distributor's own upgrades and filters. Has no storage");
+        add("tooltip.routers.distributor", "Link Exporters to it like an Importer. Whatever they send is shared out between every machine in range, narrowed by this Distributor's filters. It has no storage or upgrades");
 
         add("tooltip.routers.item_upgrade", "Allows the Extraction of Items from an Exporter at %s Per Operation");
         add("tooltip.routers.fluid_upgrade", "Allows the Extraction of Fluids from an Exporter at %smb Per Operation");
@@ -148,6 +154,12 @@ public class RoutersLangProvider extends LanguageProvider {
         add("tooltip.routers.button.fluid", "Fluid Filter");
         add("tooltip.routers.button.fluid.locked", "No connected Exporter with a Fluid Upgrade yet - filter can still be set");
 
+        add("tooltip.routers.menu.essentia", "Essentia");
+        add("tooltip.routers.button.essentia", "Essentia");
+        add("tooltip.routers.button.essentia.locked", "No connected Exporter with an Essentia Upgrade yet - filter can still be set");
+        add("gui.routers.manager.legend.essentia", "Essentia");
+        add("tooltip.routers.essentia_upgrade", "Allows the Extraction of Essentia from an Exporter at %s Per Operation");
+
         add("tooltip.routers.menu.rift_energy", "Rift Energy");
         add("tooltip.routers.button.rift_energy", "Rift Energy");
         add("tooltip.routers.button.rift_energy.locked", "No connected Exporter with a Rift Energy Upgrade yet - filter can still be set");
@@ -160,7 +172,7 @@ public class RoutersLangProvider extends LanguageProvider {
 
         add("tooltip.routers.button.back", "Back");
         add("tooltip.routers.rename", "Rename");
-        add("gui.routers.rename_hint", "Router name, Enter to save");
+        add("gui.routers.rename_hint", "Router name");
 
         add("tooltip.routers.empty_item_filter_slot", "Empty Item Filter Slot");
         add("tooltip.routers.empty_fluid_filter_slot", "Empty Fluid Filter Slot");

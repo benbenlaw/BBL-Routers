@@ -3,6 +3,7 @@ package com.benbenlaw.routers.networking.packets;
 import com.benbenlaw.routers.Routers;
 import com.benbenlaw.routers.api.NamedRouter;
 import com.benbenlaw.routers.manager.ManagerSessions;
+import com.benbenlaw.routers.screen.DistributorMenu;
 import com.benbenlaw.routers.screen.ExporterMenu;
 import com.benbenlaw.routers.screen.ImporterExporterMenu;
 import com.benbenlaw.routers.screen.ImporterMenu;
@@ -41,6 +42,7 @@ public record RenameRouter(BlockPos pos, String name) implements CustomPacketPay
         if (menu instanceof ExporterMenu exporter) return exporter.getBlockPos();
         if (menu instanceof ImporterMenu importer) return importer.getBlockPos();
         if (menu instanceof ImporterExporterMenu hybrid) return hybrid.getBlockPos();
+        if (menu instanceof DistributorMenu distributor) return distributor.getBlockPos();
         return null;
     }
 

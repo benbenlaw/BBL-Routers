@@ -45,6 +45,12 @@ public class StartupConfig {
     public static final ModConfigSpec.ConfigValue<Integer> minBackoffTicks;
     public static final ModConfigSpec.ConfigValue<Integer> maxBackoffTicks;
 
+    public static final ModConfigSpec.ConfigValue<Integer> essentiaPerOperation1;
+    public static final ModConfigSpec.ConfigValue<Integer> essentiaPerOperation2;
+    public static final ModConfigSpec.ConfigValue<Integer> essentiaPerOperation3;
+    public static final ModConfigSpec.ConfigValue<Integer> essentiaPerOperation4;
+    public static final ModConfigSpec.ConfigValue<Integer> essentiaPerOperation5;
+
     public static final ModConfigSpec.ConfigValue<Integer> riftEnergyPerOperation1;
     public static final ModConfigSpec.ConfigValue<Integer> riftEnergyPerOperation2;
     public static final ModConfigSpec.ConfigValue<Integer> riftEnergyPerOperation3;
@@ -101,6 +107,26 @@ public class StartupConfig {
         RFPerTick5 = BUILDER
                 .comment("The maximum RF per tick that tier 5 can provide.")
                 .defineInRange("RF Per Operation 5", 250000000, 1, Integer.MAX_VALUE);
+
+        essentiaPerOperation1 = BUILDER
+                .comment("The most essentia per operation that tier 1 can move (needs Thaumaturge). A jar holds 250.")
+                .defineInRange("Essentia Per Operation 1", 4, 1, Integer.MAX_VALUE);
+
+        essentiaPerOperation2 = BUILDER
+                .comment("The most essentia per operation that tier 2 can move (needs Thaumaturge).")
+                .defineInRange("Essentia Per Operation 2", 8, 1, Integer.MAX_VALUE);
+
+        essentiaPerOperation3 = BUILDER
+                .comment("The most essentia per operation that tier 3 can move (needs Thaumaturge).")
+                .defineInRange("Essentia Per Operation 3", 16, 1, Integer.MAX_VALUE);
+
+        essentiaPerOperation4 = BUILDER
+                .comment("The most essentia per operation that tier 4 can move (needs Thaumaturge).")
+                .defineInRange("Essentia Per Operation 4", 32, 1, Integer.MAX_VALUE);
+
+        essentiaPerOperation5 = BUILDER
+                .comment("The most essentia per operation that tier 5 can move (needs Thaumaturge).")
+                .defineInRange("Essentia Per Operation 5", 64, 1, Integer.MAX_VALUE);
 
         riftEnergyPerOperation1 = BUILDER
                 .comment("The most Rift energy per operation that tier 1 can move (needs BBL Rifts).")

@@ -7,6 +7,7 @@ import com.benbenlaw.core.screen.util.slot.FilterSlot;
 import com.benbenlaw.routers.api.ConfigurableRouterBlockEntity;
 import com.benbenlaw.routers.api.RouterButtonTypes;
 import com.benbenlaw.routers.screen.RoutersMenuTypes;
+import com.benbenlaw.routers.api.screen.IdFilterSlot;
 import com.benbenlaw.routers.api.screen.ScreenModule;
 import com.benbenlaw.routers.api.screen.RouterUIRegistries;
 import com.benbenlaw.routers.screen.util.button.ButtonType;
@@ -74,6 +75,11 @@ public class FilterMenu extends SimpleAbstractContainerMenu {
     public void clicked(int slotId, int button, ContainerInput clickType, Player player) {
         if (slotId >= 0 && slotId < slots.size()) {
             Slot slot = this.slots.get(slotId);
+
+            if (slot instanceof IdFilterSlot idSlot) {
+                idSlot.clickWith(this.getCarried(), level);
+                return;
+            }
 
             if (slot instanceof FilterSlot filterSlot) {
                 ItemStack carried = this.getCarried();

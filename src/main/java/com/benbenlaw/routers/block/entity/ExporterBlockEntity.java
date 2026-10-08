@@ -18,6 +18,7 @@ import com.benbenlaw.routers.transfers.RoutersTransfers;
 import com.benbenlaw.routers.util.ConnectedResources;
 import com.benbenlaw.routers.util.LinkedCapabilityCache;
 import com.benbenlaw.routers.util.ResourceScanState;
+import com.benbenlaw.routers.util.ResourceFilters;
 import com.benbenlaw.routers.util.RoutersTags;
 import com.benbenlaw.routers.util.UpgradeUtil;
 import net.minecraft.core.BlockPos;
@@ -120,6 +121,7 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
 
     private final FilterItemHandler filterItemHandler = new FilterItemHandler(this, 18);
     private final FilterFluidHandler filterFluidHandler = new FilterFluidHandler(this, 18);
+    private final ResourceFilters resourceFilters = new ResourceFilters(this);
 
     private ConnectedResources connectedResources;
     public int lastImporterIndex = 0;
@@ -338,6 +340,16 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
         return filterItemHandler;
     }
 
+    @Override
+    public FilterItemHandler getResourceFilter(Identifier resource) {
+        return resourceFilters.get(resource);
+    }
+
+    @Override
+    public boolean hasResourceFilter() {
+        return resourceFilters.any();
+    }
+
     public FilterFluidHandler getFilterFluidHandler() {
         return filterFluidHandler;
     }
@@ -438,6 +450,7 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
         upgradeItemHandler.serialize(output.child("upgradeItems"));
         filterItemHandler.serialize(output.child("itemFilter"));
         filterFluidHandler.serialize(output.child("fluidFilter"));
+        resourceFilters.save(output);
 
         output.putBoolean("isRoundRobin", isRoundRobin);
         output.putBoolean("canDoDimensionalTravel", canDoDimensionalTravel);
@@ -461,6 +474,7 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
         upgradeItemHandler.deserialize(input.childOrEmpty("upgradeItems"));
         filterItemHandler.deserialize(input.childOrEmpty("itemFilter"));
         filterFluidHandler.deserialize(input.childOrEmpty("fluidFilter"));
+        resourceFilters.load(input);
 
         isRoundRobin = input.getBooleanOr("isRoundRobin", false);
         canDoDimensionalTravel = input.getBooleanOr("canDoDimensionalTravel", false);

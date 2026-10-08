@@ -23,6 +23,7 @@ public class RoutersNetworking {
         registrar.playToServer(EditLinkFromManager.TYPE, EditLinkFromManager.STREAM_CODEC, EditLinkFromManager.HANDLER);
         registrar.playToClient(ManagerSnapshot.TYPE, ManagerSnapshot.STREAM_CODEC, RouterManagerClientHandler::handle);
 
+        registrar.playToServer(SetFilterSlotById.TYPE, SetFilterSlotById.STREAM_CODEC, SetFilterSlotById.HANDLER);
         registrar.playToServer(SyncFilterValue.TYPE, SyncFilterValue.STREAM_CODEC, SyncFilterValue.HANDLER);
         registrar.playToServer(SyncStockFilter.TYPE, SyncStockFilter.STREAM_CODEC, SyncStockFilter.HANDLER);
 

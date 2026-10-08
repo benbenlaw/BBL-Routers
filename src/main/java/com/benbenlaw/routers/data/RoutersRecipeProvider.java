@@ -1,7 +1,10 @@
 package com.benbenlaw.routers.data;
 
+import com.benbenlaw.rifts.item.RiftsItems;
 import com.benbenlaw.routers.Routers;
 import com.benbenlaw.routers.block.RoutersBlocks;
+import com.benbenlaw.routers.integration.rifts.RiftsIntegration;
+import com.benbenlaw.routers.integration.thaumaturge.ThaumaturgeIntegration;
 import com.benbenlaw.routers.item.RoutersItems;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -10,12 +13,16 @@ import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.common.conditions.ModLoadedCondition;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class RoutersRecipeProvider extends RecipeProvider {
@@ -146,6 +153,38 @@ public class RoutersRecipeProvider extends RecipeProvider {
                 .group(Routers.MOD_ID)
                 .unlockedBy("has_iron_ingot", has(Items.IRON_INGOT))
                 .save(output);
+
+        List<TagKey<Item>> upgradeMaterials = List.of(Tags.Items.INGOTS_IRON, Tags.Items.INGOTS_GOLD, Tags.Items.GEMS_DIAMOND, Tags.Items.NETHER_STARS, Tags.Items.INGOTS_NETHERITE);
+
+        //Rift Energy
+        for (int tier = 0; tier < 5; tier++) {
+            shaped(RecipeCategory.MISC, RiftsIntegration.RIFT_ENERGY_UPGRADES.get(tier).get())
+                    .pattern("ABA")
+                    .pattern("BCB")
+                    .pattern("ABA")
+                    .define('A', RiftsItems.RIFT_STEEL_NUGGET)
+                    .define('B', upgradeMaterials.get(tier))
+                    .define('C', tier == 0 ? RiftsItems.RIFT_STEEL_INGOT.get() : RiftsIntegration.RIFT_ENERGY_UPGRADES.get(tier - 1).get())
+                    .group(Routers.MOD_ID)
+                    .unlockedBy("has_rift_steel_ingot", has(RiftsItems.RIFT_STEEL_INGOT))
+                    .save(output.withConditions(new ModLoadedCondition("rifts")));
+        }
+
+        //Essentia
+        Item thaumiumNugget = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath("thaumaturge", "nugget_thaumium"));
+        Item thaumiumIngot = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath("thaumaturge", "ingot_thaumium"));
+        for (int tier = 0; tier < 5; tier++) {
+            shaped(RecipeCategory.MISC, ThaumaturgeIntegration.ESSENTIA_UPGRADES.get(tier).get())
+                    .pattern("ABA")
+                    .pattern("BCB")
+                    .pattern("ABA")
+                    .define('A', thaumiumNugget)
+                    .define('B', upgradeMaterials.get(tier))
+                    .define('C', tier == 0 ? thaumiumIngot : ThaumaturgeIntegration.ESSENTIA_UPGRADES.get(tier - 1).get())
+                    .group(Routers.MOD_ID)
+                    .unlockedBy("has_thaumium_ingot", has(thaumiumIngot))
+                    .save(output.withConditions(new ModLoadedCondition("thaumaturge")));
+        }
 
         //Energy
         shaped(RecipeCategory.MISC, RoutersItems.RF_UPGRADE_1.get())

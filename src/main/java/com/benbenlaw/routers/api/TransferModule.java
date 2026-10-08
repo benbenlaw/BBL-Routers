@@ -26,4 +26,8 @@ public interface TransferModule<H> {
     default H createDistributor(DistributorBlockEntity distributor) {
         return null;
     }
+
+    default boolean acceptsInput(H handler, Direction face) {
+        return true;
+    }
 }

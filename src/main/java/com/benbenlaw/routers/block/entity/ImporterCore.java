@@ -14,6 +14,7 @@ import com.benbenlaw.routers.item.RoutersItems;
 import com.benbenlaw.routers.screen.util.button.ButtonType;
 import com.benbenlaw.routers.util.ConnectedResources;
 import com.benbenlaw.routers.util.LinkedCapabilityCache;
+import com.benbenlaw.routers.util.ResourceFilters;
 import com.benbenlaw.routers.util.ResourceScanState;
 import com.benbenlaw.routers.util.RoutersTags;
 import com.benbenlaw.routers.util.UpgradeUtil;
@@ -67,11 +68,13 @@ public class ImporterCore implements ConfigurableRouterBlockEntity {
     private final SyncableItemHandler upgradeItemHandler;
     private final FilterItemHandler filterItemHandler;
     private final FilterFluidHandler filterFluidHandler;
+    private final ResourceFilters resourceFilters;
 
     public ImporterCore(SyncableBlockEntity host) {
         this.host = host;
         this.filterItemHandler = new FilterItemHandler(host, 18);
         this.filterFluidHandler = new FilterFluidHandler(host, 18);
+        this.resourceFilters = new ResourceFilters(host);
 
         this.upgradeItemHandler = new SyncableItemHandler(host, 9, (i, stack) ->
                 stack.is(RoutersTags.Items.IMPORTER_UPGRADES) && !hasUpgradeTypeAlready(stack), i -> false) {
@@ -291,6 +294,16 @@ public class ImporterCore implements ConfigurableRouterBlockEntity {
     }
 
     @Override
+    public FilterItemHandler getResourceFilter(Identifier resource) {
+        return resourceFilters.get(resource);
+    }
+
+    @Override
+    public boolean hasResourceFilter() {
+        return resourceFilters.any();
+    }
+
+    @Override
     public FilterFluidHandler getFilterFluidHandler() {
         return filterFluidHandler;
     }
@@ -299,6 +312,7 @@ public class ImporterCore implements ConfigurableRouterBlockEntity {
         upgradeItemHandler.serialize(output.child("upgradeItems"));
         filterItemHandler.serialize(output.child("itemFilter"));
         filterFluidHandler.serialize(output.child("fluidFilter"));
+        resourceFilters.save(output);
 
         output.putBoolean("ignoreNbt", ignoreNbt);
         output.putBoolean("isBlacklist", isBlacklist);
@@ -323,6 +337,7 @@ public class ImporterCore implements ConfigurableRouterBlockEntity {
         upgradeItemHandler.deserialize(input.childOrEmpty("upgradeItems"));
         filterItemHandler.deserialize(input.childOrEmpty("itemFilter"));
         filterFluidHandler.deserialize(input.childOrEmpty("fluidFilter"));
+        resourceFilters.load(input);
 
         ignoreNbt = input.getBooleanOr("ignoreNbt", false);
         isBlacklist = input.getBooleanOr("isBlacklist", false);

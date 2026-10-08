@@ -3,6 +3,7 @@ package com.benbenlaw.routers.manager;
 import com.benbenlaw.routers.Routers;
 import com.benbenlaw.routers.block.custom.RouterBlock;
 import com.benbenlaw.routers.block.custom.RouterManagerBlock;
+import com.benbenlaw.routers.screen.DistributorMenu;
 import com.benbenlaw.routers.screen.ImporterExporterMenu;
 import com.benbenlaw.routers.screen.ExporterMenu;
 import com.benbenlaw.routers.screen.ImporterMenu;
@@ -109,7 +110,7 @@ public class ManagerSessions {
         }
 
         boolean routerMenu = closed instanceof ExporterMenu || closed instanceof ImporterMenu
-                || closed instanceof ImporterExporterMenu || closed instanceof FilterMenu;
+                || closed instanceof ImporterExporterMenu || closed instanceof DistributorMenu || closed instanceof FilterMenu;
         if (!routerMenu) return;
 
         SESSIONS.remove(id);

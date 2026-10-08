@@ -2,6 +2,7 @@ package com.benbenlaw.routers.networking.packets;
 
 import com.benbenlaw.routers.Routers;
 import com.benbenlaw.routers.manager.ManagerSessions;
+import com.benbenlaw.routers.block.entity.DistributorBlockEntity;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.block.entity.ImporterBlockEntity;
 import com.benbenlaw.routers.screen.ExporterMenu;
@@ -33,6 +34,8 @@ public record BackMenu(BlockPos blockPos) implements CustomPacketPayload {
         if (entity instanceof ExporterBlockEntity entity1) {
             ManagerSessions.openMenu(player, entity1, packet.blockPos);
         } else if (entity instanceof ImporterBlockEntity entity1) {
+            ManagerSessions.openMenu(player, entity1, packet.blockPos);
+        } else if (entity instanceof DistributorBlockEntity entity1) {
             ManagerSessions.openMenu(player, entity1, packet.blockPos);
         }
     };

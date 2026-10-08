@@ -1,5 +1,6 @@
 package com.benbenlaw.routers.api.transfers;
 
+import com.benbenlaw.routers.api.RouteFilters;
 import com.benbenlaw.routers.block.entity.DistributorBlockEntity;
 import com.benbenlaw.routers.util.RoutersTags;
 import net.minecraft.core.Direction;
@@ -23,12 +24,12 @@ public class EnergyTransfer extends SimpleCapabilityTransfer<EnergyHandler> {
     }
 
     @Override
-    protected boolean isEmpty(EnergyHandler source) {
+    protected boolean isEmpty(EnergyHandler source, Direction side) {
         return source.getAmountAsLong() <= 0;
     }
 
     @Override
-    protected boolean move(EnergyHandler source, EnergyHandler target, int amount) {
+    protected boolean move(EnergyHandler source, Direction sourceSide, EnergyHandler target, Direction targetSide, int amount, RouteFilters filters) {
         int available;
         try (Transaction simulation = Transaction.open(null)) {
             available = source.extract(amount, simulation);

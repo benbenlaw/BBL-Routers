@@ -264,9 +264,7 @@ public class ManagerScanner {
         int importerFlags = 0;
         Kind kind;
 
-        if (blockEntity instanceof DistributorBlockEntity distributor) {
-            exporterTypes = types(distributor);
-            exporterFlags = exporterFlags(distributor);
+        if (blockEntity instanceof DistributorBlockEntity) {
             kind = Kind.DISTRIBUTOR;
             adjacent = ItemStack.EMPTY;
         } else if (blockEntity instanceof ExporterBlockEntity exporter) {
@@ -277,7 +275,7 @@ public class ManagerScanner {
             kind = Kind.IMPORTER;
         }
 
-        if (kind != Kind.DISTRIBUTOR && blockEntity instanceof ImporterHost importerHost) {
+        if (blockEntity instanceof ImporterHost importerHost) {
             importerTypes = types(importerHost.getImporterCore());
             importerFlags = importerFlags(importerHost.getImporterCore());
         }
@@ -302,7 +300,7 @@ public class ManagerScanner {
         if (exporter.canDoDimensionalTravel()) flags |= ManagerSnapshot.DIMENSIONAL;
         if (exporter.isBlacklist()) flags |= ManagerSnapshot.BLACKLIST;
         if (exporter.isIgnoreNbt()) flags |= ManagerSnapshot.IGNORE_NBT;
-        if (!ResourceHandlerUtil.isEmpty(exporter.getFilterItemHandler()) || !ResourceHandlerUtil.isEmpty(exporter.getFilterFluidHandler())) {
+        if (!ResourceHandlerUtil.isEmpty(exporter.getFilterItemHandler()) || !ResourceHandlerUtil.isEmpty(exporter.getFilterFluidHandler()) || exporter.hasResourceFilter()) {
             flags |= ManagerSnapshot.FILTERED;
         }
         return flags;
@@ -313,7 +311,7 @@ public class ManagerScanner {
         if (importer.isRoundRobin) flags |= ManagerSnapshot.ROUND_ROBIN;
         if (importer.isBlacklist()) flags |= ManagerSnapshot.BLACKLIST;
         if (importer.isIgnoreNbt()) flags |= ManagerSnapshot.IGNORE_NBT;
-        if (!ResourceHandlerUtil.isEmpty(importer.getFilterItemHandler()) || !ResourceHandlerUtil.isEmpty(importer.getFilterFluidHandler())) {
+        if (!ResourceHandlerUtil.isEmpty(importer.getFilterItemHandler()) || !ResourceHandlerUtil.isEmpty(importer.getFilterFluidHandler()) || importer.hasResourceFilter()) {
             flags |= ManagerSnapshot.FILTERED;
         }
         return flags;
