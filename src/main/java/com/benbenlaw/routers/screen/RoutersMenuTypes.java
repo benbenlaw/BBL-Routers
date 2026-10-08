@@ -31,5 +31,4 @@ public class RoutersMenuTypes {
             MENUS.register("item_filter_menu", () -> IMenuTypeExtension.create(FilterMenu::new));
 
 
-
 }
