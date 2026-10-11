@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "routers",
+  "ingredients": [
+    "routers:round_robin_upgrade",
+    "minecraft:chest"
+  ],
+  "result": {
+    "id": "routers:stack_round_robin_upgrade"
+  }
+}

@@ -55,6 +55,7 @@ public class RoutersLangProvider extends LanguageProvider {
         add("item.routers.rift_energy_upgrade_5", "Rift Energy Upgrade V");
 
         add("item.routers.round_robin_upgrade", "Round Robin Upgrade");
+        add("item.routers.stack_round_robin_upgrade", "Stack Round Robin Upgrade");
         add("item.routers.dimensional_upgrade", "Dimensional Upgrade");
         add("item.routers.blacklist_upgrade", "Blacklist Upgrade");
         add("item.routers.ignore_nbt_upgrade", "Ignore NBT/Components Upgrade");
@@ -142,6 +143,7 @@ public class RoutersLangProvider extends LanguageProvider {
         add("tooltip.routers.speed_upgrade", "Allows the Extractor to extract every %s ticks");
 
         add("tooltip.routers.round_robin_upgrade", "After each operation, the Exporter will try to insert into the next connected Importer");
+        add("tooltip.routers.stack_round_robin_upgrade", "Takes turns between the stacks in the inventory, so each operation moves from the next stack instead of the first one");
         add("tooltip.routers.dimensional_upgrade", "Allows the Exporter to send resources to an Importer in a different dimension");
         add("tooltip.routers.blacklist_upgrade", "Changes the filtering to be a Blacklist. Effects all resource types that can be filtered");
         add("tooltip.routers.ignore_nbt_upgrade", "Ignores NBT/Data when filtering resources. Effects all resource types that can be filtered");

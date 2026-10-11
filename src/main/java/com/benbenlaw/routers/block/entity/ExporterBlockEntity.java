@@ -76,6 +76,7 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
     public GlobalPos exporterPos;
 
     public boolean isRoundRobin;
+    private boolean stackRoundRobin;
     private boolean canDoDimensionalTravel;
     private boolean ignoreNbt;
     private boolean isBlacklist;
@@ -90,6 +91,7 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
         @Override
         protected void onContentsChanged(int index, ItemStack previousContents) {
             isRoundRobin = false;
+            stackRoundRobin = false;
             canDoDimensionalTravel = false;
             ignoreNbt = false;
             isBlacklist = false;
@@ -101,6 +103,10 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
 
                 if (stack.is(RoutersItems.ROUND_ROBIN_UPGRADE)) {
                     isRoundRobin = true;
+                }
+                if (stack.is(RoutersItems.STACK_ROUND_ROBIN_UPGRADE)) {
+                    isRoundRobin = true;
+                    stackRoundRobin = true;
                 }
                 if (stack.is(RoutersItems.DIMENSIONAL_UPGRADE)) {
                     canDoDimensionalTravel = true;
@@ -220,6 +226,10 @@ public class ExporterBlockEntity extends SyncableBlockEntity implements MenuProv
         if ((level.getGameTime() + worldPosition.hashCode()) % getSpeedPerOperation() == 0) {
             moveResources();
         }
+    }
+
+    public boolean isStackRoundRobin() {
+        return stackRoundRobin;
     }
 
     public int getUpgradeValue(TagKey<Item> tag) {

@@ -149,7 +149,8 @@ public class RoutersItemTagsProvider extends ItemTagsProvider {
 
         //Round Robin Upgrade
         this.tag(RoutersTags.Items.ROUND_ROBIN_UPGRADES).add(
-                RoutersItems.ROUND_ROBIN_UPGRADE.get()
+                RoutersItems.ROUND_ROBIN_UPGRADE.get(),
+                RoutersItems.STACK_ROUND_ROBIN_UPGRADE.get()
         );
 
     }

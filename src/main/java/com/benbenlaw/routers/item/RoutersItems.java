@@ -86,6 +86,9 @@ public class RoutersItems {
     public static final DeferredItem<Item> ROUND_ROBIN_UPGRADE = ITEMS.register("round_robin_upgrade",
             () -> new UpgradeItem(new Item.Properties().setId(createID("round_robin_upgrade")), 0));
 
+    public static final DeferredItem<Item> STACK_ROUND_ROBIN_UPGRADE = ITEMS.register("stack_round_robin_upgrade",
+            () -> new UpgradeItem(new Item.Properties().setId(createID("stack_round_robin_upgrade")), 0));
+
     public static final DeferredItem<Item> DIMENSIONAL_UPGRADE = ITEMS.register("dimensional_upgrade",
             () -> new UpgradeItem(new Item.Properties().setId(createID("dimensional_upgrade")), 1));
 

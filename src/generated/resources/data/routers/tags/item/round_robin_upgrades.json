@@ -1,5 +1,6 @@
 {
   "values": [
-    "routers:round_robin_upgrade"
+    "routers:round_robin_upgrade",
+    "routers:stack_round_robin_upgrade"
   ]
 }

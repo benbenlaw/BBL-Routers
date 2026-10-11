@@ -73,6 +73,7 @@ public class ClientEvents {
         addShiftTooltip(stack, event, RoutersTags.Items.SPEED_UPGRADES, "tooltip.routers.speed_upgrade", moreInfo);
 
         addShiftTooltip(stack, event, RoutersItems.ROUND_ROBIN_UPGRADE.get(), "tooltip.routers.round_robin_upgrade");
+        addShiftTooltip(stack, event, RoutersItems.STACK_ROUND_ROBIN_UPGRADE.get(), "tooltip.routers.stack_round_robin_upgrade");
         addShiftTooltip(stack, event, RoutersItems.DIMENSIONAL_UPGRADE.get(), "tooltip.routers.dimensional_upgrade");
         addShiftTooltip(stack, event, RoutersItems.BLACKLIST_UPGRADE.get(), "tooltip.routers.blacklist_upgrade");
         addShiftTooltip(stack, event, RoutersItems.IGNORE_NBT_UPGRADE.get(), "tooltip.routers.ignore_nbt_upgrade");

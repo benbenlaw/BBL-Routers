@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "routers:item/stack_round_robin_upgrade"
+  }
+}

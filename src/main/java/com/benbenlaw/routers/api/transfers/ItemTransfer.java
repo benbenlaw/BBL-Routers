@@ -11,6 +11,7 @@ import com.benbenlaw.routers.item.FilterItem;
 import com.benbenlaw.routers.item.FilterType;
 import com.benbenlaw.routers.item.RoutersDataComponents;
 import com.benbenlaw.routers.config.StartupConfig;
+import com.benbenlaw.routers.util.ResourceScanState;
 import com.benbenlaw.routers.util.RoutersTags;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -55,7 +56,9 @@ public class ItemTransfer implements TransferModule<ResourceHandler<ItemResource
 
         boolean[] moved = {false};
 
-        int result = TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin, exporter.lastImporterIndex,
+        boolean stacks = exporter.isStackRoundRobin();
+
+        int result = TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin && !stacks, exporter.lastImporterIndex,
                 (srvLevel, entity, targetPos) -> {
 
                     ResourceHandler<ItemResource> target = getTargetHandler(srvLevel, entity, targetPos);
@@ -64,9 +67,11 @@ public class ItemTransfer implements TransferModule<ResourceHandler<ItemResource
                     ImporterCore importer = ImporterCore.at(srvLevel, targetPos.pos());
 
                     int amount = entity.getUpgradeValue(RoutersTags.Items.ITEM_UPGRADES);
-                    int start = entity.getItemScanState().nextScanStart(source.size());
+                    ResourceScanState scan = entity.getItemScanState();
+                    int start = scan.nextScanStart(targetPos, source.size());
+                    if (stacks) start = scan.stackStart(source.size());
 
-                    boolean success = moveFirstBounded(source, target, start, amount, resource -> {
+                    int slot = moveFirstBounded(source, target, start, amount, resource -> {
                         boolean isWhitelist = !entity.isBlacklist();
                         int allowed = Integer.MAX_VALUE;
 
@@ -85,8 +90,9 @@ public class ItemTransfer implements TransferModule<ResourceHandler<ItemResource
 
                         return allowed;
                     });
-                    moved[0] |= success;
-                    return success;
+                    if (slot >= 0 && stacks) scan.stackMoved(slot);
+                    moved[0] |= slot >= 0;
+                    return slot >= 0;
                 });
 
         exporter.getItemScanState().recordResult(level.getGameTime(), source.size(), moved[0]);
@@ -105,7 +111,9 @@ public class ItemTransfer implements TransferModule<ResourceHandler<ItemResource
         boolean[] moved = {false};
         int[] lastSourceSize = {1};
 
-        int result = ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
+        boolean stacks = importer.isStackRoundRobin();
+
+        int result = ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex, !stacks,
                 (srvLevel, imp, exporterPos) -> {
 
                     ExporterBlockEntity exporter = getExporterAt(srvLevel, exporterPos);
@@ -116,9 +124,11 @@ public class ItemTransfer implements TransferModule<ResourceHandler<ItemResource
 
                     int amount = exporter.getUpgradeValue(RoutersTags.Items.ITEM_UPGRADES);
                     lastSourceSize[0] = Math.max(source.size(), 1);
-                    int start = imp.getItemScanState().nextScanStart(lastSourceSize[0]);
+                    ResourceScanState scan = imp.getItemScanState();
+                    int start = scan.nextScanStart(exporterPos, lastSourceSize[0]);
+                    if (stacks) start = scan.stackStart(exporterPos, lastSourceSize[0]);
 
-                    boolean success = moveFirstBounded(source, target, start, amount, resource -> {
+                    int slot = moveFirstBounded(source, target, start, amount, resource -> {
                         boolean isWhitelist = !exporter.isBlacklist();
                         int allowed = Integer.MAX_VALUE;
 
@@ -137,8 +147,9 @@ public class ItemTransfer implements TransferModule<ResourceHandler<ItemResource
 
                         return allowed;
                     });
-                    moved[0] |= success;
-                    return success;
+                    if (slot >= 0 && stacks) scan.stackMoved(exporterPos, slot);
+                    moved[0] |= slot >= 0;
+                    return slot >= 0;
                 });
 
         importer.getItemScanState().recordResult(level.getGameTime(), lastSourceSize[0], moved[0]);
@@ -149,9 +160,10 @@ public class ItemTransfer implements TransferModule<ResourceHandler<ItemResource
         int allowedAmount(ItemResource resource);
     }
 
-    private static boolean moveFirstBounded(ResourceHandler<ItemResource> source, ResourceHandler<ItemResource> target,
+    // The slot something was moved out of, or -1.
+    private static int moveFirstBounded(ResourceHandler<ItemResource> source, ResourceHandler<ItemResource> target,
                                              int start, int amount, ItemPredicate predicate) {
-        if (amount <= 0) return false;
+        if (amount <= 0) return -1;
 
         int size = source.size();
         int scanLimit = Math.min(size, StartupConfig.maxInventoryScanPerOperation.get());
@@ -170,11 +182,11 @@ public class ItemTransfer implements TransferModule<ResourceHandler<ItemResource
 
                 if (accepted > 0 && source.extract(slot, resource, accepted, tx) > 0) {
                     tx.commit();
-                    return true;
+                    return slot;
                 }
             }
         }
-        return false;
+        return -1;
     }
 
     @Nullable

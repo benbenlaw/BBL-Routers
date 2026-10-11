@@ -414,6 +414,14 @@ public class RoutersRecipeProvider extends RecipeProvider {
                 .unlockedBy("has_diamond", has(Items.DIAMOND))
                 .save(output);
 
+        //Stack Round Robin
+        shapeless(RecipeCategory.MISC, RoutersItems.STACK_ROUND_ROBIN_UPGRADE.get())
+                .requires(RoutersItems.ROUND_ROBIN_UPGRADE.get())
+                .requires(Items.CHEST)
+                .group(Routers.MOD_ID)
+                .unlockedBy("has_round_robin_upgrade", has(RoutersItems.ROUND_ROBIN_UPGRADE.get()))
+                .save(output);
+
         //Dimensional
         shaped(RecipeCategory.MISC, RoutersItems.DIMENSIONAL_UPGRADE.get())
                 .pattern("ABA")

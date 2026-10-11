@@ -72,7 +72,7 @@ public abstract class SimpleCapabilityTransfer<H> implements TransferModule<H> {
         boolean[] moved = {false};
         scan.nextScanStart(1);
 
-        int result = ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
+        int result = ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex, true,
                 (srvLevel, imp, exporterPos) -> {
                     ExporterBlockEntity exporter = getExporterAt(srvLevel, exporterPos);
                     if (exporter == null || !exporter.hasCorrectUpgrade(upgradeTag())) return false;

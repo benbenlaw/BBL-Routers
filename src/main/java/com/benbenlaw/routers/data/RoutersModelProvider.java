@@ -73,6 +73,7 @@ public class RoutersModelProvider extends ModelProvider {
         itemModels.generateFlatItem(RoutersItems.SPEED_UPGRADE_4.get(), ModelTemplates.FLAT_ITEM);
 
         itemModels.generateFlatItem(RoutersItems.ROUND_ROBIN_UPGRADE.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(RoutersItems.STACK_ROUND_ROBIN_UPGRADE.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(RoutersItems.MOD_FILTER.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(RoutersItems.TAG_FILTER.get(), ModelTemplates.FLAT_ITEM);
         itemModels.generateFlatItem(RoutersItems.STOCK_FILTER.get(), ModelTemplates.FLAT_ITEM);

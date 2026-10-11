@@ -49,6 +49,7 @@ public class ImporterCore implements ConfigurableRouterBlockEntity {
 
     public List<GlobalPos> exporterPositions = new ArrayList<>();
     public boolean isRoundRobin;
+    private boolean stackRoundRobin;
     public int lastExporterIndex = 0;
 
     private boolean ignoreNbt;
@@ -88,6 +89,7 @@ public class ImporterCore implements ConfigurableRouterBlockEntity {
                 ignoreNbt = false;
                 isBlacklist = false;
                 isRoundRobin = false;
+                stackRoundRobin = false;
 
                 for (int i = 0; i < size(); i++) {
                     ItemStack stack = getResource(i).toStack();
@@ -101,6 +103,10 @@ public class ImporterCore implements ConfigurableRouterBlockEntity {
                     }
                     if (stack.is(RoutersItems.ROUND_ROBIN_UPGRADE)) {
                         isRoundRobin = true;
+                    }
+                    if (stack.is(RoutersItems.STACK_ROUND_ROBIN_UPGRADE)) {
+                        isRoundRobin = true;
+                        stackRoundRobin = true;
                     }
                 }
 
@@ -126,6 +132,10 @@ public class ImporterCore implements ConfigurableRouterBlockEntity {
 
     public BlockPos getBlockPos() {
         return host.getBlockPos();
+    }
+
+    public boolean isStackRoundRobin() {
+        return stackRoundRobin;
     }
 
     public void tick() {

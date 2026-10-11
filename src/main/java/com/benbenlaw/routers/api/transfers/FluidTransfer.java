@@ -7,6 +7,7 @@ import com.benbenlaw.routers.block.entity.DistributorBlockEntity;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.block.entity.ImporterCore;
 import com.benbenlaw.routers.config.StartupConfig;
+import com.benbenlaw.routers.util.ResourceScanState;
 import com.benbenlaw.routers.util.RoutersTags;
 import net.minecraft.core.Direction;
 import net.minecraft.core.GlobalPos;
@@ -50,7 +51,9 @@ public class FluidTransfer implements TransferModule<ResourceHandler<FluidResour
 
         boolean[] moved = {false};
 
-        int result = TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin, exporter.lastImporterIndex,
+        boolean stacks = exporter.isStackRoundRobin();
+
+        int result = TransferEngine.run(level, exporter, exporter.importerPositions, exporter.isRoundRobin && !stacks, exporter.lastImporterIndex,
                 (srvLevel, entity, targetPos) -> {
 
                     ResourceHandler<FluidResource> target = getTargetHandler(srvLevel, entity, targetPos);
@@ -59,9 +62,11 @@ public class FluidTransfer implements TransferModule<ResourceHandler<FluidResour
                     ImporterCore importer = ImporterCore.at(srvLevel, targetPos.pos());
 
                     int amount = entity.getUpgradeValue(RoutersTags.Items.FLUID_UPGRADES);
-                    int start = entity.getFluidScanState().nextScanStart(source.size());
+                    ResourceScanState scan = entity.getFluidScanState();
+                    int start = scan.nextScanStart(targetPos, source.size());
+                    if (stacks) start = scan.stackStart(source.size());
 
-                    boolean success = moveFirstBounded(source, target, start, amount, res -> {
+                    int slot = moveFirstBounded(source, target, start, amount, res -> {
                         boolean isWhitelist = !entity.isBlacklist();
                         boolean matches = true;
 
@@ -76,8 +81,9 @@ public class FluidTransfer implements TransferModule<ResourceHandler<FluidResour
 
                         return matches;
                     });
-                    moved[0] |= success;
-                    return success;
+                    if (slot >= 0 && stacks) scan.stackMoved(slot);
+                    moved[0] |= slot >= 0;
+                    return slot >= 0;
                 });
 
         exporter.getFluidScanState().recordResult(level.getGameTime(), source.size(), moved[0]);
@@ -108,7 +114,9 @@ public class FluidTransfer implements TransferModule<ResourceHandler<FluidResour
         boolean[] moved = {false};
         int[] lastSourceSize = {1};
 
-        int result = ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex,
+        boolean stacks = importer.isStackRoundRobin();
+
+        int result = ImporterPullEngine.run(level, importer, importer.exporterPositions, importer.lastExporterIndex, !stacks,
                 (srvLevel, imp, exporterPos) -> {
 
                     ExporterBlockEntity exporter = getExporterAt(srvLevel, exporterPos);
@@ -119,9 +127,11 @@ public class FluidTransfer implements TransferModule<ResourceHandler<FluidResour
 
                     int amount = exporter.getUpgradeValue(RoutersTags.Items.FLUID_UPGRADES);
                     lastSourceSize[0] = Math.max(source.size(), 1);
-                    int start = imp.getFluidScanState().nextScanStart(lastSourceSize[0]);
+                    ResourceScanState scan = imp.getFluidScanState();
+                    int start = scan.nextScanStart(exporterPos, lastSourceSize[0]);
+                    if (stacks) start = scan.stackStart(exporterPos, lastSourceSize[0]);
 
-                    boolean success = moveFirstBounded(source, target, start, amount, res -> {
+                    int slot = moveFirstBounded(source, target, start, amount, res -> {
                         boolean isWhitelist = !exporter.isBlacklist();
                         boolean matches = true;
 
@@ -136,8 +146,9 @@ public class FluidTransfer implements TransferModule<ResourceHandler<FluidResour
 
                         return matches;
                     });
-                    moved[0] |= success;
-                    return success;
+                    if (slot >= 0 && stacks) scan.stackMoved(exporterPos, slot);
+                    moved[0] |= slot >= 0;
+                    return slot >= 0;
                 });
 
         importer.getFluidScanState().recordResult(level.getGameTime(), lastSourceSize[0], moved[0]);
@@ -148,9 +159,9 @@ public class FluidTransfer implements TransferModule<ResourceHandler<FluidResour
         boolean test(FluidResource resource);
     }
 
-    private static boolean moveFirstBounded(ResourceHandler<FluidResource> source, ResourceHandler<FluidResource> target,
+    private static int moveFirstBounded(ResourceHandler<FluidResource> source, ResourceHandler<FluidResource> target,
                                              int start, int amount, FluidPredicate predicate) {
-        if (amount <= 0) return false;
+        if (amount <= 0) return -1;
 
         int size = source.size();
         int scanLimit = Math.min(size, StartupConfig.maxInventoryScanPerOperation.get());
@@ -167,11 +178,11 @@ public class FluidTransfer implements TransferModule<ResourceHandler<FluidResour
 
                 if (accepted > 0 && source.extract(slot, res, accepted, tx) > 0) {
                     tx.commit();
-                    return true;
+                    return slot;
                 }
             }
         }
-        return false;
+        return -1;
     }
 
     @Nullable

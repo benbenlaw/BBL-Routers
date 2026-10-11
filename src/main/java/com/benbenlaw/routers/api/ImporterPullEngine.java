@@ -9,10 +9,11 @@ import java.util.List;
 
 public class ImporterPullEngine {
 
-    public static int run(ServerLevel level, ImporterCore importer, List<GlobalPos> exporters, int lastIndex, IImporterResourceTransfer transferLogic) {
+    public static int run(ServerLevel level, ImporterCore importer, List<GlobalPos> exporters, int lastIndex, boolean rotate, IImporterResourceTransfer transferLogic) {
         if (exporters == null || exporters.isEmpty()) return lastIndex;
 
         int size = exporters.size();
+        if (!rotate) lastIndex = 0;
 
         for (int i = 0; i < size; i++) {
             int currentIndex = (lastIndex + i) % size;
@@ -21,7 +22,7 @@ public class ImporterPullEngine {
             if (level.getBlockState(exporterPos.pos()).getBlock() instanceof RouterBlock) {
                 boolean isWorking = level.getBlockState(exporterPos.pos()).getValue(RouterBlock.WORKING);
                 if (isWorking && transferLogic.tryTransfer(level, importer, exporterPos)) {
-                    return (currentIndex + 1) % size;
+                    return rotate ? (currentIndex + 1) % size : lastIndex;
                 }
             }
         }
