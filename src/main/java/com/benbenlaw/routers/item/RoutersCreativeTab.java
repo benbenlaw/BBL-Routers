@@ -23,6 +23,7 @@ public class RoutersCreativeTab {
 
                 output.accept(RoutersBlocks.EXPORTER_BLOCK);
                 output.accept(RoutersBlocks.IMPORTER_BLOCK);
+                output.accept(RoutersBlocks.ROUTER_BLOCK);
                 output.accept(RoutersItems.ROUTER_CONNECTOR);
 
                 output.accept(RoutersItems.RF_UPGRADE_1);

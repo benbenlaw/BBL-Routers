@@ -24,6 +24,7 @@ public class RoutersBlockTagsProvider extends BlockTagsProvider {
         tag(BlockTags.MINEABLE_WITH_PICKAXE)
                 .add(RoutersBlocks.EXPORTER_BLOCK.get())
                 .add(RoutersBlocks.IMPORTER_BLOCK.get())
+                .add(RoutersBlocks.ROUTER_BLOCK.get())
         ;
 
     }

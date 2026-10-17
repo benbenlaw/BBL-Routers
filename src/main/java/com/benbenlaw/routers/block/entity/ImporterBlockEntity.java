@@ -31,6 +31,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -73,7 +74,11 @@ public class ImporterBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     public ImporterBlockEntity(BlockPos pos, BlockState state) {
-        super(RoutersBlockEntities.IMPORTER_BLOCK_ENTITY.get(), pos, state);
+        this(RoutersBlockEntities.IMPORTER_BLOCK_ENTITY.get(), pos, state);
+    }
+
+    protected ImporterBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
 
         if (ModList.get().isLoaded("mekanism")) {
             chemicalFilters = MekanismCompat.createChemicalFilters();

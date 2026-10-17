@@ -1,5 +1,8 @@
 Routers
 
+1.2.0
+- Added Router -- Exporter and Importer in one block: extracts from and inserts into the connected inventory. Sneak + Right Click with a Connector to set it as an Importer.
+
 1.1.9
 Tweaked JEISyncToMenu packet to not set ItemStack on the Player
 

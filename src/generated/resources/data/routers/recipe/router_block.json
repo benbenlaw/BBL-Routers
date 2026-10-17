@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "strainers",
+  "ingredients": [
+    {
+      "item": "routers:importer_block"
+    },
+    {
+      "item": "routers:exporter_block"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "routers:router_block"
+  }
+}

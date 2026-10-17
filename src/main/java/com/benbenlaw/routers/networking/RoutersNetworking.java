@@ -21,6 +21,7 @@ public class RoutersNetworking {
         }
 
         registrar.playToServer(FilterItemUpdate.TYPE, FilterItemUpdate.STREAM_CODEC, FilterItemUpdate.HANDLER);
+        registrar.playToServer(RouterSwitchTab.TYPE, RouterSwitchTab.STREAM_CODEC, RouterSwitchTab.HANDLER);
 
         registrar.playToClient(SyncFluidListToClient.TYPE, SyncFluidListToClient.STREAM_CODEC, SyncFluidListToClient.HANDLER);
 

@@ -22,6 +22,7 @@ public class RoutersLootTableProvider extends VanillaBlockLoot {
 
         this.dropSelf(RoutersBlocks.IMPORTER_BLOCK.get());
         this.dropSelf(RoutersBlocks.EXPORTER_BLOCK.get());
+        this.dropSelf(RoutersBlocks.ROUTER_BLOCK.get());
     }
 
     @Override

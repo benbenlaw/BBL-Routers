@@ -2,6 +2,7 @@ package com.benbenlaw.routers.item;
 
 import com.benbenlaw.routers.block.ExporterBlock;
 import com.benbenlaw.routers.block.ImporterBlock;
+import com.benbenlaw.routers.block.RouterBlock;
 import com.benbenlaw.routers.block.entity.ImporterBlockEntity;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.screens.Screen;
@@ -21,6 +22,24 @@ import java.util.List;
 public class ConnectorItem extends Item {
     public ConnectorItem(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public InteractionResult useOn(UseOnContext context) {
+        // Sneaking skips the block's own handling, so Sneak + Right Click on a Router always
+        // saves it as the importer position, even when the connector already holds one
+        Level level = context.getLevel();
+        Player player = context.getPlayer();
+        BlockPos pos = context.getClickedPos();
+        if (player == null || !player.isSecondaryUseActive() || !(level.getBlockState(pos).getBlock() instanceof RouterBlock)) {
+            return super.useOn(context);
+        }
+
+        if (!level.isClientSide()) {
+            context.getItemInHand().set(RoutersDataComponents.IMPORTER_POSITION, pos);
+            player.displayClientMessage(Component.translatable("message.routers.importer.added_pos"), true);
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide());
     }
 
 
