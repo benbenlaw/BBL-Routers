@@ -4,6 +4,7 @@ import com.benbenlaw.routers.Routers;
 import com.benbenlaw.routers.block.RoutersBlocks;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.block.entity.MekanismCompat;
+import com.benbenlaw.routers.block.entity.RouterBlockEntity;
 import com.benbenlaw.routers.screen.util.GhostSlot;
 import com.mojang.datafixers.util.Pair;
 import mekanism.api.chemical.ChemicalStack;
@@ -46,7 +47,7 @@ public class ExporterMenu extends AbstractContainerMenu {
         this.blockPos = blockPos;
         this.level = inventory.player.level();
         this.data = data;
-        this.blockEntity = (ExporterBlockEntity) this.level.getBlockEntity(blockPos);
+        this.blockEntity = (ExporterBlockEntity) RouterBlockEntity.exporterOf(this.level.getBlockEntity(blockPos));
 
         this.filterInventory = new SimpleContainer(Objects.requireNonNull(blockEntity).getFilters().size()) {
             @Override

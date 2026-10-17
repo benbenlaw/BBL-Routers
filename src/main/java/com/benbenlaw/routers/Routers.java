@@ -3,6 +3,7 @@ package com.benbenlaw.routers;
 import com.benbenlaw.routers.block.RoutersBlocks;
 import com.benbenlaw.routers.block.entity.RoutersBlockEntities;
 import com.benbenlaw.routers.block.entity.client.ExporterBlockEntityRenderer;
+import com.benbenlaw.routers.block.entity.client.RouterBlockEntityRenderer;
 import com.benbenlaw.routers.particle.RoutersParticles;
 import com.benbenlaw.routers.config.StartupConfig;
 import com.benbenlaw.routers.item.RoutersCreativeTab;
@@ -10,9 +11,16 @@ import com.benbenlaw.routers.item.RoutersDataComponents;
 import com.benbenlaw.routers.item.RoutersItems;
 import com.benbenlaw.routers.networking.RoutersNetworking;
 import com.benbenlaw.routers.screen.ConfigScreen;
+import com.benbenlaw.routers.screen.ExporterMenu;
 import com.benbenlaw.routers.screen.ExporterScreen;
+import com.benbenlaw.routers.screen.ImporterMenu;
 import com.benbenlaw.routers.screen.ImporterScreen;
+import com.benbenlaw.routers.screen.RouterExportScreen;
+import com.benbenlaw.routers.screen.RouterImportScreen;
+import com.benbenlaw.routers.screen.RouterTabs;
 import com.benbenlaw.routers.screen.RoutersMenuTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -57,8 +65,8 @@ public class Routers {
     public static class ClientModEvents {
         @SubscribeEvent
         public static void registerScreens(RegisterMenuScreensEvent event) {
-            event.register(RoutersMenuTypes.EXPORTER_MENU.get(), ExporterScreen::new);
-            event.register(RoutersMenuTypes.IMPORTER_MENU.get(), ImporterScreen::new);
+            event.register(RoutersMenuTypes.EXPORTER_MENU.get(), (ExporterMenu menu, Inventory inventory, Component title) -> RouterTabs.isRouter(menu.getBlockPos()) ? new RouterExportScreen(menu, inventory, title) : new ExporterScreen(menu, inventory, title));
+            event.register(RoutersMenuTypes.IMPORTER_MENU.get(), (ImporterMenu menu, Inventory inventory, Component title) -> RouterTabs.isRouter(menu.getBlockPos()) ? new RouterImportScreen(menu, inventory, title) : new ImporterScreen(menu, inventory, title));
             event.register(RoutersMenuTypes.CONFIG_MENU.get(), ConfigScreen::new);
 
 
@@ -68,6 +76,7 @@ public class Routers {
         public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
             // Moved to event bus
             event.registerBlockEntityRenderer(RoutersBlockEntities.EXPORTER_BLOCK_ENTITY.get(), ExporterBlockEntityRenderer::new);
+            event.registerBlockEntityRenderer(RoutersBlockEntities.ROUTER_BLOCK_ENTITY.get(), RouterBlockEntityRenderer::new);
         }
     }
 

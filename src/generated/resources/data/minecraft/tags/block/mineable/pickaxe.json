@@ -1,6 +1,7 @@
 {
   "values": [
     "routers:exporter_block",
-    "routers:importer_block"
+    "routers:importer_block",
+    "routers:router_block"
   ]
 }

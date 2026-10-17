@@ -1,3 +1,4 @@
-// 1.21.1	2025-08-26T13:08:38.6788326	Loot Tables
+// 1.21.1	2026-10-17T16:50:28.657735	Loot Tables
 49ec4759d59bd52e054a52044e7d8160dc45239f data/routers/loot_table/blocks/exporter_block.json
 ae9ae3e5bf6333e7e422c32c480c2a63d62a0b48 data/routers/loot_table/blocks/importer_block.json
+d6f03ffed53f8b137bf40a0ccf8ed5876f08ee21 data/routers/loot_table/blocks/router_block.json

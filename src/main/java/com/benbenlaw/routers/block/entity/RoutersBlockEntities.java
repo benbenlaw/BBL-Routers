@@ -31,6 +31,10 @@ public class RoutersBlockEntities {
             register("exporter_block_entity", () ->
                     BlockEntityType.Builder.of(ExporterBlockEntity::new, RoutersBlocks.EXPORTER_BLOCK.get()));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RouterBlockEntity>> ROUTER_BLOCK_ENTITY =
+            register("router_block_entity", () ->
+                    BlockEntityType.Builder.of(RouterBlockEntity::new, RoutersBlocks.ROUTER_BLOCK.get()));
+
 
     public static <T extends BlockEntity> DeferredHolder<BlockEntityType<?>, BlockEntityType<T>> register(@Nonnull String name, @Nonnull Supplier<BlockEntityType.Builder<T>> initializer) {
         return BLOCK_ENTITIES.register(name, () -> initializer.get().build(null));

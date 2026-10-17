@@ -3,6 +3,7 @@ package com.benbenlaw.routers.networking.packets;
 import com.benbenlaw.routers.Routers;
 import com.benbenlaw.routers.block.entity.ExporterBlockEntity;
 import com.benbenlaw.routers.block.entity.ImporterBlockEntity;
+import com.benbenlaw.routers.block.entity.RouterBlockEntity;
 import com.benbenlaw.routers.screen.ExporterMenu;
 import com.benbenlaw.routers.screen.ImporterMenu;
 import com.benbenlaw.routers.screen.util.GhostSlot;
@@ -35,7 +36,7 @@ public record JEISyncToMenuChemical(int slot, ChemicalStack stack) implements Cu
             if (slot instanceof GhostSlot ghostSlot) {
                 ghostSlot.setChemical(packet.stack);
 
-                if (level.getBlockEntity(menu.getBlockPos()) instanceof ExporterBlockEntity blockEntity) {
+                if (RouterBlockEntity.exporterOf(level.getBlockEntity(menu.getBlockPos())) instanceof ExporterBlockEntity blockEntity) {
                     int slotIndex = packet.slot();
                     if (slotIndex < blockEntity.getChemicalFilters().size()) {
                         ((NonNullList<ChemicalStack>) blockEntity.getChemicalFilters()).set(slotIndex, packet.stack());
