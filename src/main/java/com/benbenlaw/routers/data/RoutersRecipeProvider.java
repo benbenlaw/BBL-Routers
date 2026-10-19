@@ -18,6 +18,7 @@ import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
+import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Items;
@@ -57,6 +58,14 @@ public class RoutersRecipeProvider extends RecipeProvider {
                 .define('B', Items.IRON_INGOT)
                 .group("strainers")
                 .unlockedBy("has_item", has(Items.IRON_INGOT))
+                .save(consumer);
+
+        //Router
+        ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, RoutersBlocks.ROUTER_BLOCK.get())
+                .requires(RoutersBlocks.IMPORTER_BLOCK.get())
+                .requires(RoutersBlocks.EXPORTER_BLOCK.get())
+                .group("strainers")
+                .unlockedBy("has_item", has(RoutersBlocks.IMPORTER_BLOCK.get()))
                 .save(consumer);
 
         //Connector

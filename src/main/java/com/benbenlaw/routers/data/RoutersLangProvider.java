@@ -68,6 +68,7 @@ public class RoutersLangProvider extends LanguageProvider {
         //Blocks
         addBlockTranslation("importer_block", "Importer");
         addBlockTranslation("exporter_block", "Exporter");
+        addBlockTranslation("router_block", "Router");
 
         //Messages
         addMessageTranslation("exporter.remove_importer", "Removed Importer from Exporter");
@@ -97,10 +98,13 @@ public class RoutersLangProvider extends LanguageProvider {
         addTooltipsTranslation("router_connector", "Right Click on an Importer to set the position then Right Click on an Exporter to link them. Right Click to unlink.");
         addTooltipsTranslation("exporter", "Does nothing on its own, used to extract from the connected inventory to a connected Importer(s). Use Upgrades to allow different types of extraction.");
         addTooltipsTranslation("importer", "Does nothing on its own, used to insert into the connected inventory from a connected Exporter.");
+        addTooltipsTranslation("router", "Exporter and Importer in one block: extracts from and inserts into the connected inventory. Sneak + Right Click with a Connector to set it as an Importer.");
         addTooltipsTranslation("exporter_filter_slots", "Empty Item/Fluid Filter");
         addTooltipsTranslation("exporter_upgrades_slots", "Upgrade Slot");
 
         add("screen.routers.config_screen", "Set Filter");
+        add("screen.routers.router.export_tab", "Export");
+        add("screen.routers.router.import_tab", "Import");
 
     }
 

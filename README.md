@@ -30,6 +30,14 @@
 3. **Link**: Right-click the **Importer** with a **Router Connector**, then right-click the **Exporter** to pair them.
 4. **Add Upgrade**: Insert an **Item Upgrade** (or Fluid/RF Upgrade) into the Exporter to start transferring.
 
+### 🟣 Router
+
+The **Router** is an Exporter and an Importer in one block. It extracts from the inventory it faces into its linked Importers, and receives from linked Exporters into that same inventory. Its GUI has an **Export** tab (filters + upgrades) and an **Import** tab (filters).
+
+- Right-click a Router with a **Router Connector** that has no saved position: the Router is saved as the Importer position.
+- Right-click it while a position is saved: the Router links to that Importer as an Exporter (click again to unlink).
+- **Sneak + Right-click** always saves the Router as the Importer position.
+
 > [!NOTE]
 > For a complete guide covering all upgrade tiers, rates, and filtering options, check out the **[Full Tutorial](file:///d:/projekt/BBL%20Router/tutorial.md)**.
 

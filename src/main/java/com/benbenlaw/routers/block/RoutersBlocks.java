@@ -19,6 +19,9 @@ public class RoutersBlocks {
     public static final DeferredBlock<ExporterBlock> EXPORTER_BLOCK = registerBlock("exporter_block",
             () -> new ExporterBlock(Block.Properties.of().strength(2.0f).noOcclusion()));
 
+    public static final DeferredBlock<RouterBlock> ROUTER_BLOCK = registerBlock("router_block",
+            () -> new RouterBlock(Block.Properties.of().strength(2.0f).noOcclusion()));
+
 
     private static <T extends Block> DeferredBlock<T> registerBlock(String name, Supplier<T> block) {
         DeferredBlock<T> toReturn = BLOCKS.register(name, block);

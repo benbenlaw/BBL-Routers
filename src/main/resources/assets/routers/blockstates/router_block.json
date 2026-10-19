@@ -1,0 +1,11 @@
+{
+    "variants": {
+        "facing=north": { "model": "routers:block/router_block", "y": 180 },
+        "facing=east": { "model": "routers:block/router_block", "y": 270 },
+        "facing=south": { "model": "routers:block/router_block", "y": 0 },
+        "facing=west": { "model": "routers:block/router_block", "y": 90 },
+        "facing=down": { "model": "routers:block/router_block", "x": 270 },
+        "facing=up": { "model": "routers:block/router_block", "x": 90 }
+
+    }
+}
